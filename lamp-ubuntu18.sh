@@ -80,7 +80,7 @@ printf "Install MySQL...\n"
 apt-get -y install mysql-server mysql-client
 printf "Install NodeJS...\n"
 curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-apt-get install -y nodejs
+apt-get -y install nodejs
 # Set up unattended upgrades
 printf "Set up unattended Upgrades...\n"
 apt-get -y install unattended-upgrades
