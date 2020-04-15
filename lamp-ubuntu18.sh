@@ -112,17 +112,17 @@ fi
 printf "Changing MaxKeepAliveRequests to 0...\n"
 FIND="^\s*MaxKeepAliveRequests \s*\d*"
 REPLACE="MaxKeepAliveRequests 0"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 printf "Changing Timeout to 60...\n"
 FIND="^\s*Timeout \s*\d*"
 REPLACE="Timeout 60"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 printf "Adding security settings and caching...\n"
 FIND="#<\/Directory>"
 REPLACE="$(cat << 'EOF'
-</Directory>
+#</Directory>
 
 # Disable HTTP 1.0
 RewriteEngine On
@@ -153,12 +153,14 @@ Header unset ETag
 FileETag None
 EOF
 )"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
+REPLACE=${REPLACE//\//\\\/} # Escape the / characters
+REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 printf "Adding <Directory /srv/www/> configuration for /srv/www...\n"
 FIND="#<\/Directory>"
 REPLACE="$(cat << 'EOF'
-</Directory>
+#</Directory>
 
 <Directory /srv/www/>
     Options FollowSymLinks -Indexes -Includes
@@ -176,7 +178,9 @@ REPLACE="$(cat << 'EOF'
 </Directory>
 EOF
 )"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
+REPLACE=${REPLACE//\//\\\/} # Escape the / characters
+REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 if [ ! -f /etc/apache2/mods-available/deflate.conf.orig ]; then
 	printf "Backing up original compression configuration file to /etc/apache2/mods-available/deflate.conf.orig\n"
@@ -186,7 +190,7 @@ fi
 printf "Adding compression for SVG and fonts...\n"
 FIND="<\/IfModule>"
 REPLACE="\t# Add SVG images\n\t\tAddOutputFilterByType DEFLATE image\/svg+xml\n\t\t# Add font files\n\t\tAddOutputFilterByType DEFLATE application\/x-font-woff\n\t\tAddOutputFilterByType DEFLATE application\/x-font-woff2\n\t\tAddOutputFilterByType DEFLATE application\/vnd.ms-fontobject\n\t\tAddOutputFilterByType DEFLATE application\/x-font-ttf\n\t\tAddOutputFilterByType DEFLATE application\/x-font-otf\n\t<\/IfModule>"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/deflate.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/deflate.conf
 
 if [ ! -f /etc/apache2/mods-available/mime.conf.orig ]; then
 	printf "Backing up original MIME configuration file to /etc/apache2/mods-available/mime.conf.orig\n"
@@ -196,7 +200,7 @@ fi
 printf "Adding MIME types for font files...\n"
 FIND="<IfModule mod_mime\.c>"
 REPLACE="<IfModule mod_mime\.c>\n\n\t# Add font files\n\tAddType application\/x-font-woff2 \.woff2\n\tAddType application\/x-font-otf \.otf\n\tAddType application\/x-font-ttf \.ttf\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mime.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mime.conf
 
 if [ ! -f /etc/apache2/mods-available/dir.conf.orig ]; then
 	printf "Backing up original directory listing configuration file to /etc/apache2/mods-available/dir.conf.orig\n"
@@ -206,11 +210,11 @@ fi
 printf "Making index.php the default file for directory listing...\n"
 FIND="index\.php "
 REPLACE=""
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/dir.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/dir.conf
 
 FIND="DirectoryIndex"
 REPLACE="DirectoryIndex index\.php"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/dir.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/dir.conf
 
 if [ ! -f /etc/apache2/mods-available/mpm_prefork.conf.orig ]; then
 	printf "Backing up original mpm_prefork configuration file to /etc/apache2/mods-available/mpm_prefork.conf.orig\n"
@@ -229,19 +233,19 @@ SPARESERVERS=$((STARTSERVERS*4)) # Max number of spare servers started
 printf "Updating memory settings...\n"
 FIND="^\s*StartServers\s*[0-9]*"
 REPLACE="\tStartServers\t\t\t$STARTSERVERS"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 FIND="^\s*MinSpareServers\s*[0-9]*"
 REPLACE="\tMinSpareServers\t\t $STARTSERVERS"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 FIND="^\s*MaxSpareServers\s*[0-9]*"
 REPLACE="\tMaxSpareServers\t\t $SPARESERVERS"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 FIND="^\s*MaxRequestWorkers\s*[0-9]*"
 REPLACE="\tMaxRequestWorkers\t\t$MAXWORKERS"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 FIND="^\s*MaxConnectionsPerChild\s*[0-9]*"
 REPLACE="\tMaxConnectionsPerChild  0"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 
 # Apache logs rotation and compression
 if ! grep -q /srv/www/*/logs/ "/etc/logrotate.d/apache2"; then
@@ -266,7 +270,7 @@ fi
 printf "Set ModPagespeed filters to CoreFilters...\n"
 FIND="^\s*#*\s*ModPagespeedRewriteLevel\s+PassThrough"
 REPLACE="\tModPagespeedRewriteLevel CoreFilters"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/pagespeed.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/pagespeed.conf
 
 # Virtual Hosts
 printf $DIVIDER
@@ -325,42 +329,42 @@ fi
 FIND="^\s*output_buffering\s*=\s*.*"
 REPLACE="output_buffering = Off"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*max_execution_time\s*=\s*.*"
 REPLACE="max_execution_time = 60"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*error_reporting\s*=\s*.*"
 REPLACE="error_reporting = E_ALL \& ~E_NOTICE \& ~E_STRICT \& ~E_DEPRECATED"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*log_errors_max_len\s*=\s*.*"
 REPLACE="log_errors_max_len = 0"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*post_max_size\s*=\s*.*"
 REPLACE="post_max_size = 20M"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*upload_max_filesize\s*=\s*.*"
 REPLACE="upload_max_filesize = 20M"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*short_open_tag\s*=\s*.*"
 REPLACE="short_open_tag = On"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 FIND="^\s*;\s*max_input_vars\s*=\s*.*" # this is commented in the original file
 REPLACE="max_input_vars = 5000"
 printf "php.ini: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/7.2/apache2/php.ini
 
 # php7.2.conf correct settings
 if [ ! -f /etc/apache2/mods-available/php7.2.conf.orig ]; then
@@ -371,11 +375,11 @@ fi
 printf "Correct settings in php7.2.conf\n"
 FIND="Order Deny,Allow"
 REPLACE="# Order Deny,Allow"
-sed -i "s/$FIND/$REPLACE/g" /etc/apache2/mods-available/php7.2.conf
+perl -pi -e "s/$FIND/$REPLACE/g" /etc/apache2/mods-available/php7.2.conf
 
 FIND="Deny from all"
 REPLACE="# Deny from all\n\tRequire all granted"
-sed -i "s/$FIND/$REPLACE/g" /etc/apache2/mods-available/php7.2.conf
+perl -pi -e "s/$FIND/$REPLACE/g" /etc/apache2/mods-available/php7.2.conf
 
 # Restart Apache
 printf "Restarting Apache...\n"
@@ -388,9 +392,9 @@ printf "MYSQL\n"
 printf "The script will update MySQL and setup intial databases\n"
 read -p "Press ENTER to continue"
 
-if [ ! -f /etc/mysql/my.cnf.orig ]; then
-	printf "Backing up my.cnf configuration file to /etc/mysql/my.cnf.orig\n"
-	cp /etc/mysql/my.cnf /etc/mysql/my.cnf.orig
+if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
+	printf "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig\n"
+	cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
 fi
 
 printf "Updating configuration\n"
@@ -398,37 +402,38 @@ printf "Updating configuration\n"
 FIND="^\s*key_buffer\s*=\s*.*"
 REPLACE="key_buffer=16M"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*max_allowed_packet\s*=\s*.*"
 REPLACE="max_allowed_packet=16M"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*thread_stack\s*=\s*.*"
 REPLACE="thread_stack=192K"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*thread_cache_size\s*=\s*.*"
 REPLACE="thread_cache_size=8"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*#\s*table_cache\s*=\s*.*" # commented by default
 REPLACE="table_cache=64"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*#\s*log_slow_queries\s*=\s*.*" # commented by default
 REPLACE="log_slow_queries = /var/log/mysql/mysql-slow.log"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+REPLACE=${REPLACE//\//\\\/} # Escape the / characters
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 FIND="^\s*#\s*long_query_time\s*=\s*.*" # commented by default
 REPLACE="long_query_time=1"
 printf "my.cnf: $REPLACE\n"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/mysql/my.cnf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 printf "Secure MySQL installation\n"
 printf "Make sure you enter a new root password, and answer all questions with Y\nWhen prompted to select password validation policy select LOW (option 0)\n"
@@ -589,12 +594,12 @@ fi
 printf "Adding OWASP rules in ModSecurity configuration...\n"
 FIND="^\s*IncludeOptional"
 REPLACE="\t# IncludeOptional"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
 # Replace again
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
 FIND="<\/IfModule>"
 REPLACE="\tIncludeOptional \/etc\/modsecurity\/owasp-crs-setup.conf\n\tIncludeOptional \/etc\/modsecurity\/rules\/\*.conf\n<\/IfModule>"
-sed -i "0,/$FIND/s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
 
 # Set up Bad Bots Blocker
 printf $DIVIDER
