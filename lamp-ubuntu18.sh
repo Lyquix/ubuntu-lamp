@@ -129,16 +129,11 @@ RewriteEngine On
 RewriteCond %{THE_REQUEST} !HTTP/1.1$
 RewriteRule .* - [F]
 
-# Disable unused HTTP request methods
-<LimitExcept GET POST HEAD>
-deny from all
-</LimitExcept>
-
 # Disable Trace HTTP request
 TraceEnable off
 
 # Disable SSL v2 & v3
-SSLProtocol –ALL +TLSv1.2 +TLSv1.3
+SSLProtocol TLSv1.2
 
 # Disable server signature
 ServerSignature Off
@@ -155,6 +150,7 @@ EOF
 )"
 REPLACE=${REPLACE//\//\\\/} # Escape the / characters
 REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
+REPLACE=${REPLACE//\$/\\$} # Escape the $ characters
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 printf "Adding <Directory /srv/www/> configuration for /srv/www...\n"
@@ -173,8 +169,13 @@ REPLACE="$(cat << 'EOF'
     Header set X-Frame-Options sameorigin
     Header unset X-Powered-By
     Header set X-UA-Compatible "IE=edge"
-    Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure
+    Header set Set-Cookie HttpOnly;Secure
     Header set X-XSS-Protection "1; mode=block"
+
+    # Disable unused HTTP request methods
+    <LimitExcept GET POST HEAD>
+      deny from all
+    </LimitExcept>
 </Directory>
 EOF
 )"
