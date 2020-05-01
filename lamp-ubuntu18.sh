@@ -159,7 +159,7 @@ REPLACE="$(cat << 'EOF'
 #</Directory>
 
 <Directory /srv/www/>
-    Options FollowSymLinks -Indexes -Includes
+    Options +FollowSymLinks -Indexes -Includes
     AllowOverride all
     Require all granted
     IncludeOptional /etc/apache2/custom.d/globalblacklist.conf
