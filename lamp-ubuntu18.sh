@@ -169,7 +169,6 @@ REPLACE="$(cat << 'EOF'
     Header set X-Frame-Options sameorigin
     Header unset X-Powered-By
     Header set X-UA-Compatible "IE=edge"
-    Header set Set-Cookie HttpOnly;Secure
     Header set X-XSS-Protection "1; mode=block"
 
     # Disable unused HTTP request methods
