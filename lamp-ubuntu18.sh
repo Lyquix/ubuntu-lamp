@@ -516,7 +516,7 @@ printf "Add automatic database dump and rotation...\n"
 #write out current crontab
 crontab -l > mycron.txt
 #echo new cron into cron file
-<< EOF > mycron.txt
+cat >> mycron.txt <<EOL
 # Daily 00:00 - database check and optimization
 0 0 * * * mysqlcheck -Aos -u root -p'$mysqlrootpsw' > /dev/null 2>&1
 
@@ -531,7 +531,7 @@ crontab -l > mycron.txt
 
 # Daily 05:00 update apache bad bot blocker definitions
 0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
-EOF
+EOL
 #install new cron file
 crontab mycron.txt
 rm mycron.txt
