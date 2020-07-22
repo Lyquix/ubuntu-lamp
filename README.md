@@ -67,6 +67,7 @@ Current version: `lamp-ubuntu18.sh`
     * php7.2-gd
     * php7.2-imap
     * php7.2-mysql
+    * php7.2-mysqli
     * php7.2-cli
     * php7.2-cgi
     * php7.2-zip
