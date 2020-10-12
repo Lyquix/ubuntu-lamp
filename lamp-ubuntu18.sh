@@ -530,6 +530,14 @@ cat >> mycron.txt <<EOL
 
 # Daily 05:00 update apache bad bot blocker definitions
 0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
+
+# Sundays 04:00 - restart Apache and MySQL
+0 3 * * 0 service apache2 restart
+0 3 * * 0 service mysql restart
+
+# First Day of the Month  04:00 - restart server
+0 4 1 * * /sbin/shutdown -r now
+
 EOL
 #install new cron file
 crontab mycron.txt
