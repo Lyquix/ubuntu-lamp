@@ -59,7 +59,7 @@ apt-get -y update
 printf "Upgrade installed packages...\n"
 apt-get -y upgrade
 printf "Install utilities...\n"
-PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent")
+PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"
 do
 	apt-get -y install ${PCKG}
@@ -76,11 +76,20 @@ for PCKG in "${PCKGS[@]}"
 do
 	apt-get -y install ${PCKG}
 done
+
+# Install NodeJS
 printf "Install MySQL...\n"
 apt-get -y install mysql-server mysql-client
 printf "Install NodeJS...\n"
 curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 apt-get -y install nodejs
+
+# Install CertBot
+printf "Install CertBot...\n"
+add-apt-repository -y ppa:certbot/certbot
+apt-get update
+apt-get -y install python-certbot-apache
+
 # Set up unattended upgrades
 printf "Set up unattended Upgrades...\n"
 apt-get -y install unattended-upgrades
@@ -537,6 +546,9 @@ cat >> mycron.txt <<EOL
 
 # First Day of the Month  04:00 - restart server
 0 4 1 * * /sbin/shutdown -r now
+
+# Twice Daily 06:00, 18:00 - check and update ssl certificates
+0 6,18 * * * /usr/bin/certbot renew --quiet
 
 EOL
 #install new cron file
