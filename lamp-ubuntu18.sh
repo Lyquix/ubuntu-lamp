@@ -77,9 +77,11 @@ do
 	apt-get -y install ${PCKG}
 done
 
-# Install NodeJS
+# Install MySQL
 printf "Install MySQL...\n"
 apt-get -y install mysql-server mysql-client
+
+# Install NodeJS
 printf "Install NodeJS...\n"
 curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 apt-get -y install nodejs
