@@ -77,6 +77,12 @@ do
 	apt-get -y install ${PCKG}
 done
 
+# Install Composer
+printf "Install Composer...\n"
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+php composer-setup.php
+rm composer-setup.php
+
 # Install MySQL
 printf "Install MySQL...\n"
 apt-get -y install mysql-server mysql-client
