@@ -144,7 +144,7 @@ RewriteRule .* - [F]
 TraceEnable off
 
 # Disable SSL v2 & v3
-SSLProtocol TLSv1.2
+SSLProtocol -all +TLSv1.2 +TLSv1.3
 
 # Disable server signature
 ServerSignature Off
