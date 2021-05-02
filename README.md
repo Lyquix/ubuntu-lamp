@@ -2,14 +2,14 @@
 
 Bash scripts to automatically setup LAMP server following best practices.
 
-Current version: `lamp-ubuntu18.sh`
+Current version: `lamp-ubuntu20.sh`
 
 ## How to use
 
   * Log in to your fresh Ubuntu server as root
-  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu18.sh`
-  * Change permissions: `chmod 755 lamp-ubuntu18.sh`
-  * Run and follow prompts: `./lamp-ubuntu18.sh`
+  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu20.sh`
+  * Change permissions: `chmod 755 lamp-ubuntu20.sh`
+  * Run and follow prompts: `./lamp-ubuntu20.sh`
 
 ## What does this script do?
 
@@ -59,36 +59,36 @@ Current version: `lamp-ubuntu18.sh`
     * libapache2-mod-fcgid
     * apache2-suexec-pristine
     * libapache2-mod-security2
-  * PHP 7.2
+  * PHP 7.4
     * mcrypt
     * imagemagick
-    * php7.2
-    * php7.2-common
-    * php7.2-gd
-    * php7.2-imap
-    * php7.2-mysql
-    * php7.2-mysqli
-    * php7.2-cli
-    * php7.2-cgi
-    * php7.2-zip
+    * php7.4
+    * php7.4-common
+    * php7.4-gd
+    * php7.4-imap
+    * php7.4-mysql
+    * php7.4-mysqli
+    * php7.4-cli
+    * php7.4-cgi
+    * php7.4-zip
     * php-pear
     * php-auth
     * php-mcrypt
     * php-imagick
-    * php7.2-curl
-    * php7.2-mbstring
-    * php7.2-bcmath
-    * php7.2-xml
-    * php7.2-soap
-    * php7.2-opcache
-    * php7.2-intl
+    * php7.4-curl
+    * php7.4-mbstring
+    * php7.4-bcmath
+    * php7.4-xml
+    * php7.4-soap
+    * php7.4-opcache
+    * php7.4-intl
     * php-apcu
     * php-mail
     * php-mail-mime
-    * php7.2-memcached
+    * php7.4-memcached
     * php-all-dev
-    * php7.2-dev
-    * libapache2-mod-php7.2
+    * php7.4-dev
+    * libapache2-mod-php7.4
   * MySQL
   * NodeJS 12
 
