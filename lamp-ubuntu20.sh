@@ -88,9 +88,10 @@ apt-get -y install nodejs
 
 # Install CertBot
 printf "Install CertBot...\n"
-add-apt-repository -y ppa:certbot/certbot
-apt-get update
-apt-get -y install python-certbot-apache
+snap install core
+snap refresh core
+snap install --classic certbot
+ln -s /snap/bin/certbot /usr/bin/certbot
 
 # Set up unattended upgrades
 printf "Set up unattended Upgrades...\n"
