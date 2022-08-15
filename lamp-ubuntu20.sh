@@ -447,13 +447,6 @@ REPLACE="long_query_time=1"
 printf "my.cnf: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
-printf "Secure MySQL installation\n"
-printf "Make sure you enter a new root password, and answer all questions with Y\nWhen prompted to select password validation policy select LOW (option 0)\n"
-read -p "Please ENTER to continue "
-mysql_secure_installation
-
-printf "Setup databases and users\n"
-
 while true; do
 	read -sp "Enter password for MySQL root: " mysqlrootpsw
 	case $mysqlrootpsw in
@@ -461,6 +454,20 @@ while true; do
 		* ) break;;
 	esac
 done
+mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$mysqlrootpsw';"
+
+printf "Secure MySQL installation\n"
+printf "Make sure you answer the questions that will be prompted as follows:\n"
+printf " - Validate password component: No\n"
+printf " - Change password for root: No\n"
+printf " - Disallow root login remotely: Yes\n"
+printf " - Remove anonymous users: Yes\n"
+printf " - Remove test database: Yes\n"
+printf " - Reload the privilege tables now: Yes\n"
+read -p "Please ENTER to continue "
+mysql_secure_installation
+
+printf "Setup databases and users\n"
 
 printf "\nPlease set name for databases, users and passwords\n"
 while true; do
