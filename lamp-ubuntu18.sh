@@ -542,9 +542,12 @@ cat >> mycron.txt <<EOL
 # Daily 05:00 update apache bad bot blocker definitions
 0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
 
-# Sundays 04:00 - restart Apache and MySQL
+# Sundays 03:00 - restart Apache and MySQL
 0 3 * * 0 service apache2 restart
 0 3 * * 0 service mysql restart
+
+# Sundays 03:15 - Update and upgrade OS
+15 3 * * 0 apt-get update && apt-get -y upgrade
 
 # First Day of the Month  04:00 - restart server
 0 4 1 * * /sbin/shutdown -r now
