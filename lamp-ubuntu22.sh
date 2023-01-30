@@ -83,7 +83,7 @@ apt-get -y install mysql-server mysql-client
 
 # Install NodeJS
 printf "Install NodeJS...\n"
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 apt-get -y install nodejs
 
 # Install CertBot
