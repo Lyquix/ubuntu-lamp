@@ -7,9 +7,9 @@ Current version: `lamp-ubuntu20.sh`
 ## How to use
 
   * Log in to your fresh Ubuntu server as root
-  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu20.sh`
-  * Change permissions: `chmod 755 lamp-ubuntu20.sh`
-  * Run and follow prompts: `./lamp-ubuntu20.sh`
+  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu22.sh`
+  * Change permissions: `chmod 755 lamp-ubuntu22.sh`
+  * Run and follow prompts: `./lamp-ubuntu22.sh`
 
 ## What does this script do?
 
@@ -59,36 +59,36 @@ Current version: `lamp-ubuntu20.sh`
     * libapache2-mod-fcgid
     * apache2-suexec-pristine
     * libapache2-mod-security2
-  * PHP 7.4
+  * PHP 8.1
     * mcrypt
     * imagemagick
-    * php7.4
-    * php7.4-common
-    * php7.4-gd
-    * php7.4-imap
-    * php7.4-mysql
-    * php7.4-mysqli
-    * php7.4-cli
-    * php7.4-cgi
-    * php7.4-zip
+    * php8.1
+    * php8.1-common
+    * php8.1-gd
+    * php8.1-imap
+    * php8.1-mysql
+    * php8.1-mysqli
+    * php8.1-cli
+    * php8.1-cgi
+    * php8.1-zip
     * php-pear
     * php-auth
     * php-mcrypt
     * php-imagick
-    * php7.4-curl
-    * php7.4-mbstring
-    * php7.4-bcmath
-    * php7.4-xml
-    * php7.4-soap
-    * php7.4-opcache
-    * php7.4-intl
+    * php8.1-curl
+    * php8.1-mbstring
+    * php8.1-bcmath
+    * php8.1-xml
+    * php8.1-soap
+    * php8.1-opcache
+    * php8.1-intl
     * php-apcu
     * php-mail
     * php-mail-mime
-    * php7.4-memcached
+    * php8.1-memcached
     * php-all-dev
-    * php7.4-dev
-    * libapache2-mod-php7.4
+    * php8.1-dev
+    * libapache2-mod-php8.1
   * MySQL
   * NodeJS 12
 
