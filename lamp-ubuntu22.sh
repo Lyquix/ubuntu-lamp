@@ -10,6 +10,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 DIVIDER="\n***************************************\n\n"
+NEEDRESTART_MODE=a
 
 # Welcome and instructions
 printf $DIVIDER
@@ -59,6 +60,7 @@ apt-get -y update
 printf "Upgrade installed packages...\n"
 apt-get -y upgrade
 printf "Install utilities...\n"
+NEEDRESTART_MODE=a
 PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"
 do
@@ -76,15 +78,6 @@ for PCKG in "${PCKGS[@]}"
 do
 	apt-get -y install ${PCKG}
 done
-
-# Install MySQL
-printf "Install MySQL...\n"
-apt-get -y install mysql-server mysql-client
-
-# Install NodeJS
-printf "Install NodeJS...\n"
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-apt-get -y install nodejs
 
 # Install CertBot
 printf "Install CertBot...\n"
@@ -359,12 +352,12 @@ printf "php.ini: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/apache2/php.ini
 
 FIND="^\s*post_max_size\s*=\s*.*"
-REPLACE="post_max_size = 20M"
+REPLACE="post_max_size = 50M"
 printf "php.ini: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/apache2/php.ini
 
 FIND="^\s*upload_max_filesize\s*=\s*.*"
-REPLACE="upload_max_filesize = 20M"
+REPLACE="upload_max_filesize = 50M"
 printf "php.ini: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/apache2/php.ini
 
@@ -374,7 +367,7 @@ printf "php.ini: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/apache2/php.ini
 
 FIND="^\s*;\s*max_input_vars\s*=\s*.*" # this is commented in the original file
-REPLACE="max_input_vars = 5000"
+REPLACE="max_input_vars = 10000"
 printf "php.ini: $REPLACE\n"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/apache2/php.ini
 
@@ -398,54 +391,38 @@ printf "Restarting Apache...\n"
 service apache2 restart
 
 
-# MySQL
+# Install MySQL
 printf $DIVIDER
+printf "Install MySQL\n"
+while true; do
+	read -p "Use local database? (install MySQL server) [Y/N]" installMySQLserver
+	case $installMySQLserver in
+		[Yy]* )
+			printf "Installing MySQL server and client...\n"
+			apt-get -y install mysql-server mysql-client
+			if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
+				printf "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig\n"
+				cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
+			fi
+
+			printf "Download optimized MySQL configuration to /etc/mysql/conf.d/my.cnf\n"
+			wget -O /etc/mysql/conf.d/my.cnf https://gist.github.com/fevangelou/fb72f36bbe333e059b66/raw/d1a8410c7a187f5142b7a15fcabdc445587dfe91/my.cnf
+
+			break;;
+		[Nn]* )
+			printf "Installing only MySQL client...\n"
+			apt-get -y install mysql-client
+			break;;
+		* ) printf "Please answer Y or N\n";;
+	esac
+done
+
+apt-get -y install mysql-server mysql-client
+
+# MySQL
 printf "MYSQL\n"
 printf "The script will update MySQL and setup intial databases\n"
 read -p "Press ENTER to continue"
-
-if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
-	printf "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig\n"
-	cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
-fi
-
-printf "Updating configuration\n"
-
-FIND="^\s*key_buffer\s*=\s*.*"
-REPLACE="key_buffer=16M"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*max_allowed_packet\s*=\s*.*"
-REPLACE="max_allowed_packet=16M"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*thread_stack\s*=\s*.*"
-REPLACE="thread_stack=192K"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*thread_cache_size\s*=\s*.*"
-REPLACE="thread_cache_size=8"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*#\s*table_cache\s*=\s*.*" # commented by default
-REPLACE="table_cache=64"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*#\s*log_slow_queries\s*=\s*.*" # commented by default
-REPLACE="log_slow_queries = /var/log/mysql/mysql-slow.log"
-printf "my.cnf: $REPLACE\n"
-REPLACE=${REPLACE//\//\\\/} # Escape the / characters
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-FIND="^\s*#\s*long_query_time\s*=\s*.*" # commented by default
-REPLACE="long_query_time=1"
-printf "my.cnf: $REPLACE\n"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 while true; do
 	read -sp "Enter password for MySQL root: " mysqlrootpsw

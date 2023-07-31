@@ -10,6 +10,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 DIVIDER="\n***************************************\n\n"
+NEEDRESTART_MODE=a
 
 # Welcome and instructions
 printf $DIVIDER
@@ -59,6 +60,7 @@ apt-get -y update
 printf "Upgrade installed packages...\n"
 apt-get -y upgrade
 printf "Install utilities...\n"
+NEEDRESTART_MODE=a
 PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"
 do

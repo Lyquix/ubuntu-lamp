@@ -7,6 +7,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 DIVIDER="\n***************************************\n\n"
+NEEDRESTART_MODE=a
 
 # Welcome and instructions
 printf $DIVIDER
