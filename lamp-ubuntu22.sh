@@ -611,6 +611,9 @@ FIND="<\/IfModule>"
 REPLACE="\tIncludeOptional \/etc\/modsecurity\/owasp-crs-setup.conf\n\tIncludeOptional \/etc\/modsecurity\/rules\/\*.conf\n<\/IfModule>"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
 
+# Disable default security config
+a2disconf security
+
 # Set up Bad Bots Blocker
 printf $DIVIDER
 printf "Set up Bad Bot Blocker...\n"
