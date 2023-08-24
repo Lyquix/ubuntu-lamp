@@ -153,7 +153,7 @@ ServerTokens Prod
 
 # Browser Caching
 ExpiresActive On
-ExpiresDefault "access plus 30 days"
+ExpiresDefault "access plus 1 year"
 ExpiresByType text/html "access plus 15 minutes"
 Header unset Last-Modified
 Header unset ETag
