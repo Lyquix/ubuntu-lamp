@@ -53,46 +53,44 @@ printf "Now the script will update Ubuntu and install all the necessary software
 printf " * You will be prompted to enter the password for the MySQL root user\n"
 read -p "Please ENTER to continue "
 printf "Repository update...\n"
-apt-get -y update
+apt-get update --fix-missing
 printf "Upgrade installed packages...\n"
 apt-get -y upgrade
 printf "Install utilities...\n"
 PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"
 do
-	apt-get -y install ${PCKG}
+	echo "$PCKG"
+	apt-get -y -q=2 install ${PCKG}
 done
 printf "Install Apache...\n"
 PCKGS=("apache2" "apache2-doc" "apachetop" "libapache2-mod-php" "libapache2-mod-fcgid" "apache2-suexec-pristine" "libapache2-mod-security2")
 for PCKG in "${PCKGS[@]}"
 do
-	apt-get -y install ${PCKG}
+	echo "$PCKG"
+	apt-get -y -q=2 install ${PCKG}
 done
 printf "Install PHP...\n"
 PCKGS=("mcrypt" "imagemagick" "php7.0" "php7.0-common" "php7.0-gd" "php7.0-imap" "php7.0-mysql" "php7.0-mysqli" "php7.0-cli" "php7.0-cgi" "php7.0-zip" "php-pear" "php-imagick" "php7.0-curl" "php7.0-mbstring" "php7.0-bcmath" "php7.0-xml" "php7.0-soap" "php7.0-opcache" "php7.0-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php7.0-dev" "libapache2-mod-php7.2" "php7.0-memcached" "php-auth" "php-mcrypt")
 for PCKG in "${PCKGS[@]}"
 do
-	apt-get -y install ${PCKG}
+	echo "$PCKG"
+	apt-get -y -q=2 install ${PCKG}
 done
 
 # Install MySQL
 printf "Install MySQL...\n"
-apt-get -y install mysql-server mysql-client
-
-# Install NodeJS
-printf "Install NodeJS...\n"
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-apt-get -y install nodejs
+apt-get -y -q=2 install mysql-server mysql-client
 
 # Install CertBot
 printf "Install CertBot...\n"
 add-apt-repository -y ppa:certbot/certbot
 apt-get update
-apt-get -y install python-certbot-apache
+apt-get -y -q=2 install python-certbot-apache
 
 # Set up unattended upgrades
 printf "Set up unattended Upgrades...\n"
-apt-get -y install unattended-upgrades
+apt-get -y -q=2 install unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # Set password for www-data user and allow shell access
@@ -256,10 +254,25 @@ FIND="^\s*MaxConnectionsPerChild\s*[0-9]*"
 REPLACE="\tMaxConnectionsPerChild  0"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_prefork.conf
 
-# Apache logs rotation and compression
 if ! grep -q /srv/www/*/logs/ "/etc/logrotate.d/apache2"; then
-	LOGROTATE="/srv/www/*/logs/access.log {\n\tmonthly\n\tmissingok\n\trotate 12\n\tcompress\n\tnotifempty\n\tcreate 644 www-data www-data\n}\n/srv/www/*/logs/error.log {\n\tsize 100M\n\tmissingok\n\trotate 4\n\tcompress\n\tnotifempty\n\tcreate 644 www-data www-data\n}\n"
-	printf "$LOGROTATE" >> /etc/logrotate.d/apache2
+	LOGROTATE="/srv/www/*/logs/access.log {
+	monthly
+	missingok
+	rotate 12
+	compress
+	notifempty
+	create 644 www-data www-data
+}
+/srv/www/*/logs/error.log {
+	size 100M
+	missingok
+	rotate 4
+	compress
+	notifempty
+	create 644 www-data www-data
+}
+"
+	echo -e "$LOGROTATE" >> /etc/logrotate.d/apache2
 fi
 
 #ModPageSpeed
@@ -305,12 +318,23 @@ if [ -f /etc/apache2/sites-available/$domain.conf ]; then
 fi
 
 # Production
-VIRTUALHOST="<VirtualHost $IPV4:80>\n\tServerName $domain\n\tServerAlias www.$domain\n\tDocumentRoot /srv/www/$domain/public_html/\n\tErrorLog /srv/www/$domain/logs/error.log\n\tCustomLog /srv/www/$domain/logs/access.log combined\n</VirtualHost>\n";
-printf "$VIRTUALHOST" > /etc/apache2/sites-available/$domain.conf
+VIRTUALHOST="<VirtualHost $IPV4:80>
+	ServerName $domain
+	ServerAlias www.$domain
+	DocumentRoot /srv/www/$domain/public_html/
+	ErrorLog /srv/www/$domain/logs/error.log
+	CustomLog /srv/www/$domain/logs/access.log combined
+</VirtualHost>\n";
+echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$domain.conf
 
 # Development
-VIRTUALHOST="<VirtualHost $IPV4:80>\n\tServerName dev.$domain\n\tDocumentRoot /srv/www/dev.$domain/public_html/\n\tErrorLog /srv/www/dev.$domain/logs/error.log\n\tCustomLog /srv/www/dev.$domain/logs/access.log combined\n</VirtualHost>\n";
-printf "$VIRTUALHOST" > /etc/apache2/sites-available/dev.$domain.conf
+VIRTUALHOST="<VirtualHost $IPV4:80>
+	ServerName dev.$domain
+	DocumentRoot /srv/www/dev.$domain/public_html/
+	ErrorLog /srv/www/dev.$domain/logs/error.log
+	CustomLog /srv/www/dev.$domain/logs/access.log combined
+</VirtualHost>\n";
+echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/dev.$domain.conf
 
 # Create directories
 mkdir -p /srv/www/$domain/public_html
@@ -595,15 +619,49 @@ ip6tables-save > /etc/iptables/rules.v6
 # Set fail2ban jails
 printf $DIVIDER
 printf "Setting up fail2ban jails rules...\n"
-FAIL2BANJAILS="[sshd]\nenabled = true\n\n[sshd-ddos]\nenabled = true\n\n[apache-auth]\nenabled = true\n\n[apache-badbots]\nenabled = true\n\n[apache-noscript]\nenabled = true\n\n[apache-overflows]\nenabled = true\n\n[apache-nohome]\nenabled = true\n\n[apache-botsearch]\nenabled = true\n\n[apache-fakegooglebot]\nenabled = true\n\n[apache-modsecurity]\nenabled = true\n\n[apache-shellshock]\nenabled = true\n\n[php-url-fopen]\nenabled = true\n\n";
-printf "$FAIL2BANJAILS" > /etc/fail2ban/jail.local
+FAIL2BANJAILS="[sshd]\nenabled = true
+
+[sshd-ddos]
+enabled = true
+
+[apache-auth]
+enabled = true
+
+[apache-badbots]
+enabled = true
+
+[apache-noscript]
+enabled = true
+
+[apache-overflows]
+enabled = true
+
+[apache-nohome]
+enabled = true
+
+[apache-botsearch]
+enabled = true
+
+[apache-fakegooglebot]
+enabled = true
+
+[apache-modsecurity]
+enabled = true
+
+[apache-shellshock]
+enabled = true
+
+[php-url-fopen]
+enabled = true
+";
+echo -e "$FAIL2BANJAILS" > /etc/fail2ban/jail.local
 service fail2ban restart
 
 # Get OWASP rules for ModSecurity
 printf $DIVIDER
 printf "Downloading OWASP rules for ModSecurity...\n"
 wget https://github.com/SpiderLabs/owasp-modsecurity-crs/archive/v3.2/master.zip -O /tmp/owasp-modsecurity-crs.zip
-unzip /tmp/owasp-modsecurity-crs.zip -d /tmp
+unzip -q /tmp/owasp-modsecurity-crs.zip -d /tmp
 rm /tmp/owasp-modsecurity-crs.zip
 mv /tmp/owasp-modsecurity-crs-3.2-master/crs-setup.conf.example /etc/modsecurity/owasp-crs-setup.conf
 mv /tmp/owasp-modsecurity-crs-3.2-master/rules /etc/modsecurity/
