@@ -119,7 +119,7 @@ a2enmod expires headers rewrite ssl suphp proxy_fcgi setenvif mpm_event http2 se
 
 printf "Apache configurations...\n"
 a2enconf php8.1-fpm
-a2disconf security
+a2disconf security apache2-conf
 
 if [ ! -f /etc/apache2/apache2.conf.orig ]; then
 	printf "Backing up original configuration file to /etc/apache2/apache2.conf.orig\n"

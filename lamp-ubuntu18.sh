@@ -123,7 +123,7 @@ printf "Apache configurations...\n"
 HTTP2CONF='<IfModule !mpm_prefork>\n\tProtocols h2 h2c http/1.1\n</IfModule>'
 echo -e "$HTTP2CONF" > /etc/apache2/conf-available/http2.conf
 a2enconf php7.2-fpm http2
-a2disconf security
+a2disconf security apache2-conf
 
 if [ ! -f /etc/apache2/apache2.conf.orig ]; then
 	printf "Backing up original configuration file to /etc/apache2/apache2.conf.orig\n"
