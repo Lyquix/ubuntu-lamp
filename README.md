@@ -2,7 +2,7 @@
 
 Bash scripts to automatically setup LAMP server following best practices.
 
-Current version: `lamp-ubuntu20.sh`
+Current version: `lamp-ubuntu22.sh`
 
 ## How to use
 
