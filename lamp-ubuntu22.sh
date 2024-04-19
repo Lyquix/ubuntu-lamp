@@ -165,6 +165,10 @@ REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
 REPLACE=${REPLACE//\$/\\$} # Escape the $ characters
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
+printf "Generating AES-256-CBC encryption key\n"
+ENCRYPTION_KEY=$(openssl rand -base64 32)
+IV=$(openssl rand -base64 16)
+
 printf "Adding <Directory /srv/www/> configuration for /srv/www...\n"
 FIND="#<\/Directory>"
 REPLACE="$(cat << 'EOF'
@@ -181,6 +185,8 @@ REPLACE="$(cat << 'EOF'
     Header set X-Frame-Options sameorigin
     Header unset X-Powered-By
     Header set X-XSS-Protection "1; mode=block"
+    SetEnv WPCONFIG_ENCKEY ENCRYPTION_KEY
+    SetEnv WPCONFIG_IV ENCRYPTION_IV
 
     # Disable unused HTTP request methods
     <LimitExcept GET POST HEAD OPTIONS>
@@ -189,6 +195,9 @@ REPLACE="$(cat << 'EOF'
 </Directory>
 EOF
 )"
+# Replace the placeholders with actual values
+REPLACE=${REPLACE//ENCRYPTION_KEY/$ENCRYPTION_KEY}
+REPLACE=${REPLACE//ENCRYPTION_IV/$IV}
 REPLACE=${REPLACE//\//\\\/} # Escape the / characters
 REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
@@ -319,6 +328,41 @@ while true; do
 	esac
 done
 
+
+# Suggest stg and dev domains
+stg_domain="stg.$domain"
+dev_domain="dev.$domain"
+
+echo "Suggested staging domain: $stg_domain"
+while true; do
+    read -p "Would you like to keep this as your staging domain? [Y/n] " answer
+    case "$answer" in
+        [Yy]*|"") # Accept default or yes
+            break;;
+        [Nn]* ) # Enter a new value
+            read -p "Enter your staging domain: " stg_domain
+            break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+echo "Suggested development domain: $dev_domain"
+while true; do
+    read -p "Would you like to keep this as your development domain? [Y/n] " answer
+    case "$answer" in
+        [Yy]*|"") # Accept default or yes
+            break;;
+        [Nn]* ) # Enter a new value
+            read -p "Enter your development domain: " dev_domain
+            break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+printf "Main domain: $domain\n"
+printf "Staging domain: $stg_domain\n"
+printf "Development domain: $dev_domain\n"
+
 # Get IPv4
 IPV4=$(ip -4 addr | grep inet | grep -v '127.0.0.1' | awk -F '[ \t]+|/' '{print $3}' | grep -v ^127.2.1)
 
@@ -326,6 +370,14 @@ IPV4=$(ip -4 addr | grep inet | grep -v '127.0.0.1' | awk -F '[ \t]+|/' '{print 
 if [ -f /etc/apache2/sites-available/$domain.conf ]; then
 	printf "Backing up existing virtual host configuration file to /etc/apache2/sites-available/$domain.conf.bak\n"
 	cp /etc/apache2/sites-available/$domain.conf /etc/apache2/sites-available/$domain.conf.bak
+fi
+if [ -f /etc/apache2/sites-available/$stg_domain.conf ]; then
+	printf "Backing up existing virtual host configuration file to /etc/apache2/sites-available/$stg_domain.conf.bak\n"
+	cp /etc/apache2/sites-available/$stg_domain.conf /etc/apache2/sites-available/$stg_domain.conf.bak
+fi
+if [ -f /etc/apache2/sites-available/$dev_domain.conf ]; then
+	printf "Backing up existing virtual host configuration file to /etc/apache2/sites-available/$dev_domain.conf.bak\n"
+	cp /etc/apache2/sites-available/$dev_domain.conf /etc/apache2/sites-available/$dev_domain.conf.bak
 fi
 
 # Production
@@ -335,28 +387,43 @@ VIRTUALHOST="<VirtualHost $IPV4:80>
 	DocumentRoot /srv/www/$domain/public_html/
 	ErrorLog /srv/www/$domain/logs/error.log
 	CustomLog /srv/www/$domain/logs/access.log combined
+	SetEnv WPCONFIG_ENVNAME production
 </VirtualHost>\n";
 echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$domain.conf
 
+# Staging
+VIRTUALHOST="<VirtualHost $IPV4:80>
+	ServerName $stg_domain
+	DocumentRoot /srv/www/$stg_domain/public_html/
+	ErrorLog /srv/www/$stg_domain/logs/error.log
+	CustomLog /srv/www/$stg_domain/logs/access.log combined
+	SetEnv WPCONFIG_ENVNAME staging
+</VirtualHost>\n";
+echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$stg_domain.conf
+
 # Development
 VIRTUALHOST="<VirtualHost $IPV4:80>
-	ServerName dev.$domain
-	DocumentRoot /srv/www/dev.$domain/public_html/
-	ErrorLog /srv/www/dev.$domain/logs/error.log
-	CustomLog /srv/www/dev.$domain/logs/access.log combined
+	ServerName $dev_domain
+	DocumentRoot /srv/www/$dev_domain/public_html/
+	ErrorLog /srv/www/$dev_domain/logs/error.log
+	CustomLog /srv/www/$dev_domain/logs/access.log combined
+	SetEnv WPCONFIG_ENVNAME development
 </VirtualHost>\n";
-echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/dev.$domain.conf
+echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$dev_domain.conf
 
 # Create directories
 mkdir -p /srv/www/$domain/public_html
 mkdir -p /srv/www/$domain/logs
-mkdir -p /srv/www/dev.$domain/public_html
-mkdir -p /srv/www/dev.$domain/logs
+mkdir -p /srv/www/$stg_domain/public_html
+mkdir -p /srv/www/$stg_domain/logs
+mkdir -p /srv/www/$dev_domain/public_html
+mkdir -p /srv/www/$dev_domain/logs
 chown -R www-data:www-data /srv/www
 
 # Enable sites
 a2ensite $domain
-a2ensite dev.$domain
+a2ensite $stg_domain
+a2ensite $dev_domain
 service apache2 reload
 
 # PHP
@@ -526,6 +593,28 @@ while true; do
 done
 while true; do
 	printf "\n"
+	read -p "Staging database name (recommended: use domain without TLD followed by _stg, for mydomain.com use mydomain_stg): " stgdbname
+	case $stgdbname in
+		"" ) printf "Database name may not be left blank\n";;
+		* ) break;;
+	esac
+done
+while true; do
+	read -p "Staging database user (recommended: use same as database name, max 16 characters): " stgdbuser
+	case $stgdbuser in
+		"" ) printf "User name may not be left blank\n";;
+		* ) break;;
+	esac
+done
+while true; do
+	read -sp "Staging database password: " stgdbpass
+	case $stgdbpass in
+		"" ) printf "\nPassword may not be left blank\n";;
+		* ) break;;
+	esac
+done
+while true; do
+	printf "\n"
 	read -p "Development database name (recommended: use domain without TLD followed by _dev, for mydomain.com use mydomain_dev): " devdbname
 	case $devdbname in
 		"" ) printf "Database name may not be left blank\n";;
@@ -547,18 +636,52 @@ while true; do
 	esac
 done
 
-printf "Create database $dbname...\n"
-mysql -u root -p$mysqlrootpsw -e "CREATE DATABASE $dbname;"
-printf "Create user $dbuser...\n"
-mysql -u root -p$mysqlrootpsw -e "CREATE USER '$dbuser'@localhost IDENTIFIED BY '$dbpass';"
-printf "Grant $dbuser all privileges on $dbname...\n"
-mysql -u root -p$mysqlrootpsw -e "GRANT ALL PRIVILEGES ON $dbname.* TO '$dbuser'@localhost;"
-printf "Create database $devdbname...\n"
-mysql -u root -p$mysqlrootpsw -e "CREATE DATABASE $devdbname;"
-printf "Create user $devdbuser...\n"
-mysql -u root -p$mysqlrootpsw -e "CREATE USER '$devdbuser'@localhost IDENTIFIED BY '$devdbpass';"
-printf "Grant $devdbuser all privileges on $devdbname...\n"
-mysql -u root -p$mysqlrootpsw -e "GRANT ALL PRIVILEGES ON $devdbname.* TO '$devdbuser'@localhost;"
+# Declare associative arrays for each environment
+declare -A production=( [dbname]=$dbname [dbuser]=$dbuser [dbpass]=$dbpass [key]="DB_" )
+declare -A staging=( [dbname]=$stgdbname [dbuser]=$stgdbuser [dbpass]=$stgdbpass [key]="STGDB_" )
+declare -A development=( [dbname]=$devdbname [dbuser]=$devdbuser [dbpass]=$devdbpass [key]="DEVDB_" )
+
+# Array of all environments
+environments=(production staging development)
+
+printf $environments
+
+# File to store encrypted credentials
+encrypted_credentials_file="encrypted_credentials.txt"
+key_hex=$(echo -n $ENCRYPTION_KEY | base64 -d | xxd -p -c 32)
+iv_hex=$(echo -n $IV | base64 -d | xxd -p -c 16)
+
+# Loop through each environment
+for env in "${environments[@]}"; do
+    # Dynamically access the associative array for the current environment
+    declare -n current="${env}"
+
+    printf "Create database ${current[dbname]}...\n"
+    mysql -u root -p"$mysqlrootpsw" -e "CREATE DATABASE ${current[dbname]};"
+
+    # Encrypt database name
+    value="${current[dbname]}"
+    encrypted_value=$(echo -n "$value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $key_hex -iv $iv_hex)
+    echo "${current[key]}NAME=$encrypted_value" >> "$encrypted_credentials_file"
+
+    printf "Create user ${current[dbuser]}...\n"
+    mysql -u root -p"$mysqlrootpsw" -e "CREATE USER '${current[dbuser]}'@'localhost' IDENTIFIED BY '${current[dbpass]}';"
+
+    # Encrypt database user
+    value="${current[dbuser]}"
+    encrypted_value=$(echo -n "$value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $key_hex -iv $iv_hex)
+    echo "${current[key]}USER=$encrypted_value" >> "$encrypted_credentials_file"
+
+    printf "Grant ${current[dbuser]} all privileges on ${current[dbname]}...\n"
+    mysql -u root -p"$mysqlrootpsw" -e "GRANT ALL PRIVILEGES ON ${current[dbname]}.* TO '${current[dbuser]}'@'localhost';"
+
+    # Encrypt database user
+    value="${current[dbpass]}"
+    encrypted_value=$(echo -n "$value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $key_hex -iv $iv_hex)
+    echo "${current[key]}PASSWORD=$encrypted_value" >> "$encrypted_credentials_file"
+done
+
+printf "Credentials have been encrypted and stored in $encrypted_credentials_file\n"
 
 printf "Restart MySQL...\n"
 service mysql restart
