@@ -452,33 +452,35 @@ service apache2 restart
 # Install MySQL
 printf $DIVIDER
 printf "Install MySQL\n"
-while true; do
-	read -p "Use local database? (install MySQL server) [Y/N]" installMySQLserver
-	case $installMySQLserver in
-		[Yy]* )
-			printf "Installing MySQL server and client...\n"
-			apt-get -y -q=2 install mysql-server mysql-client
-			if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
-				printf "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig\n"
-				cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
-			fi
 
-			printf "Download optimized MySQL configuration to /etc/mysql/conf.d/my.cnf\n"
-			wget -O /etc/mysql/conf.d/my.cnf https://gist.github.com/fevangelou/fb72f36bbe333e059b66/raw/d1a8410c7a187f5142b7a15fcabdc445587dfe91/my.cnf
+printf "Installing MySQL server and client...\n"
+apt-get -y -q=2 install mysql-server mysql-client
+if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
+	printf "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig\n"
+	cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
+fi
 
-			break;;
-		[Nn]* )
-			printf "Installing only MySQL client...\n"
-			apt-get -y -q=2 install mysql-client
-			break;;
-		* ) printf "Please answer Y or N\n";;
-	esac
-done
+printf "Download optimized MySQL configuration to /etc/mysql/conf.d/my.cnf\n"
+wget -O /etc/mysql/conf.d/my.cnf https://gist.github.com/fevangelou/fb72f36bbe333e059b66/raw/d1a8410c7a187f5142b7a15fcabdc445587dfe91/my.cnf
 
-# MySQL
-printf "MYSQL\n"
-printf "The script will update MySQL and setup intial databases\n"
-read -p "Press ENTER to continue"
+# Create the systemd override directory for mysql.service if it doesn't already exist
+mkdir -p /etc/systemd/system/mysql.service.d
+
+# Write the override configuration to restart MySQL automatically
+cat <<EOF > /etc/systemd/system/mysql.service.d/override.conf
+[Service]
+Restart=always
+RestartSec=5s
+EOF
+
+# Reload the systemd daemon to apply changes
+systemctl daemon-reload
+
+# Ensure MySQL service is enabled to start on boot
+systemctl enable mysql
+
+# Restart MySQL
+systemctl restart mysql
 
 while true; do
 	read -sp "Enter password for MySQL root: " mysqlrootpsw
