@@ -319,9 +319,6 @@ while true; do
 	esac
 done
 
-# Get IPv4
-IPV4=$(ip -4 addr | grep inet | grep -v '127.0.0.1' | awk -F '[ \t]+|/' '{print $3}' | grep -v ^127.2.1)
-
 # Backup previous virtual host files
 if [ -f /etc/apache2/sites-available/$domain.conf ]; then
 	printf "Backing up existing virtual host configuration file to /etc/apache2/sites-available/$domain.conf.bak\n"
@@ -329,7 +326,7 @@ if [ -f /etc/apache2/sites-available/$domain.conf ]; then
 fi
 
 # Production
-VIRTUALHOST="<VirtualHost $IPV4:80>
+VIRTUALHOST="<VirtualHost *:80>
 	ServerName $domain
 	ServerAlias www.$domain
 	DocumentRoot /srv/www/$domain/public_html/
@@ -339,7 +336,7 @@ VIRTUALHOST="<VirtualHost $IPV4:80>
 echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$domain.conf
 
 # Development
-VIRTUALHOST="<VirtualHost $IPV4:80>
+VIRTUALHOST="<VirtualHost *:80>
 	ServerName dev.$domain
 	DocumentRoot /srv/www/dev.$domain/public_html/
 	ErrorLog /srv/www/dev.$domain/logs/error.log
