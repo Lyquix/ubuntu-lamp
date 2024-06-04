@@ -906,7 +906,6 @@ salt_names=("AUTH_KEY" "SECURE_AUTH_KEY" "LOGGED_IN_KEY" "NONCE_KEY" "AUTH_SALT"
 
 # Generate WordPress salts
 SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
-printf "$SALTS"
 
 # Loop through the salt names and process each one
 for salt in "${salt_names[@]}"; do
@@ -914,11 +913,9 @@ for salt in "${salt_names[@]}"; do
 
 	# Extract the salt value
 	value=$(echo "$SALTS" | grep "'$salt'" | awk -F"'" '{print $4}')
-    echo $value
 
 	# Encrypt the value
 	encrypted_value=$(echo $value | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
-    echo $encrypted_value
 
 	FIND="{{${salt}}}"
 	REPLACE=$(printf '%s\n' "$encrypted_value" | sed 's/[\&/]/\\&/g')
@@ -1060,8 +1057,7 @@ done
 printf $DIVIDER
 echo "Create .htpasswd file"
 # Remove any subdomains and the TLD from the username
-HTUSER=${domain#*.}
-HTUSER=${HTUSER%%.*}
+HTUSER=$(echo $domain | awk -F'.' '{print $(NF-1)}')
 htpasswd -bc /srv/www/.htpasswd $HTUSER review
 
 # Set firewall rules
