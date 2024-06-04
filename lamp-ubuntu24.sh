@@ -13,7 +13,7 @@ DIVIDER="\n\n*******************************************************************
 
 # Welcome and instructions
 printf $DIVIDER
-echo "Lyquix LAMP server setup on Ubuntu 22.04"
+echo "Lyquix LAMP server setup on Ubuntu 24.04"
 printf $DIVIDER
 
 # Prompt to continue
@@ -89,7 +89,7 @@ do
 	apt-get -y -q=2 install ${PCKG}
 done
 echo "Installing PHP..."
-PCKGS=("mcrypt" "imagemagick" "php8.1" "php8.1-common" "php8.1-gd" "php8.1-imap" "php8.1-mysql" "php8.1-mysqli" "php8.1-cli" "php8.1-cgi" "php8.1-fpm" "php8.1-zip" "php-pear" "php-imagick" "php8.1-curl" "php8.1-mbstring" "php8.1-bcmath" "php8.1-xml" "php8.1-soap" "php8.1-opcache" "php8.1-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php8.1-dev" "libapache2-mod-php8.1" "php8.1-memcached" "composer")
+PCKGS=("mcrypt" "imagemagick" "php8.3" "php8.3-common" "php8.3-gd" "php8.3-imap" "php8.3-mysql" "php8.3-mysqli" "php8.3-cli" "php8.3-cgi" "php8.3-fpm" "php8.3-zip" "php-pear" "php-imagick" "php8.3-curl" "php8.3-mbstring" "php8.3-bcmath" "php8.3-xml" "php8.3-soap" "php8.3-opcache" "php8.3-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php8.3-dev" "libapache2-mod-php8.3" "php8.3-memcached" "composer")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
@@ -145,11 +145,11 @@ systemctl enable apache2
 systemctl restart apache2
 
 echo "Apache modules..."
-a2dismod php8.1
+a2dismod php8.3
 a2enmod expires headers rewrite ssl suphp proxy_fcgi setenvif mpm_event http2 security2
 
 echo "Apache configurations..."
-a2enconf php8.1-fpm
+a2enconf php8.3-fpm
 a2disconf security apache2-conf
 
 if [ ! -f /etc/apache2/apache2.conf.orig ]; then
@@ -459,54 +459,54 @@ printf $DIVIDER
 echo "PHP"
 echo "The script will update PHP configuration"
 
-if [ ! -f /etc/php/8.1/fpm/php.ini.orig ]; then
-	echo "Backing up PHP.ini configuration file to /etc/php/8.1/fpm/php.ini.orig"
-	cp /etc/php/8.1/fpm/php.ini /etc/php/8.1/fpm/php.ini.orig
+if [ ! -f /etc/php/8.3/fpm/php.ini.orig ]; then
+	echo "Backing up PHP.ini configuration file to /etc/php/8.3/fpm/php.ini.orig"
+	cp /etc/php/8.3/fpm/php.ini /etc/php/8.3/fpm/php.ini.orig
 fi
 
 FIND="^\s*output_buffering\s*=\s*.*"
 REPLACE="output_buffering = Off"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*max_execution_time\s*=\s*.*"
 REPLACE="max_execution_time = 60"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*error_reporting\s*=\s*.*"
 REPLACE="error_reporting = E_ALL \& ~E_NOTICE \& ~E_STRICT \& ~E_DEPRECATED"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*log_errors_max_len\s*=\s*.*"
 REPLACE="log_errors_max_len = 0"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*post_max_size\s*=\s*.*"
 REPLACE="post_max_size = 50M"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*upload_max_filesize\s*=\s*.*"
 REPLACE="upload_max_filesize = 50M"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*short_open_tag\s*=\s*.*"
 REPLACE="short_open_tag = On"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
 FIND="^\s*;\s*max_input_vars\s*=\s*.*" # this is commented in the original file
 REPLACE="max_input_vars = 10000"
 echo "php.ini: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/php.ini
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/php.ini
 
-if [ ! -f /etc/php/8.1/fpm/pool.d/www.conf.orig ]; then
-	echo "Backing up PHP-FPM Pool configuration file to /etc/php/8.1/fpm/pool.d/www.conf.orig"
-	cp /etc/php/8.1/fpm/pool.d/www.conf /etc/php/8.1/fpm/pool.d/www.conf.orig
+if [ ! -f /etc/php/8.3/fpm/pool.d/www.conf.orig ]; then
+	echo "Backing up PHP-FPM Pool configuration file to /etc/php/8.3/fpm/pool.d/www.conf.orig"
+	cp /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf.orig
 fi
 
 MAXCHILDREN=$(( MAXWORKERS/8 )) # Max number of PHP-FPM processes
@@ -516,30 +516,30 @@ MINSPARESERVERS=$(( CPUS*2 ))
 FIND="^\s*pm\.max_children\s*=\s*.*"
 REPLACE="pm.max_children = $MAXCHILDREN"
 echo "www.conf: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/pool.d/www.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.start_servers\s*=\s*.*"
 REPLACE="pm.start_servers = $STARTSERVERS"
 echo "www.conf: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/pool.d/www.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.min_spare_servers\s*=\s*.*"
 REPLACE="pm.min_spare_servers = $MINSPARESERVERS"
 echo "www.conf: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/pool.d/www.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.max_spare_servers\s*=\s*.*"
 REPLACE="pm.max_spare_servers = $STARTSERVERS"
 echo "www.conf: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/pool.d/www.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*;\s*pm\.max_requests\s*=\s*.*"
 REPLACE="pm.max_requests = $STARTSERVERS"
 echo "www.conf: $REPLACE"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.1/fpm/pool.d/www.conf
+perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 
 # Enable PHP-FPM
-systemctl enable php8.1-fpm
+systemctl enable php8.3-fpm
 
 # Restart Apache
 echo "Restarting PHP-FPM and Apache..."
-service php8.1-fpm start
+service php8.3-fpm start
 service apache2 restart
 
 
