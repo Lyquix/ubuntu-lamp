@@ -79,21 +79,21 @@ PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "send
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 echo "Installing Apache..."
 PCKGS=("apache2" "apachetop" "libapache2-mod-php" "libapache2-mod-fcgid" "apache2-suexec-pristine" "libapache2-mod-security2")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 echo "Installing PHP..."
 PCKGS=("mcrypt" "imagemagick" "php8.1" "php8.1-common" "php8.1-gd" "php8.1-imap" "php8.1-mysql" "php8.1-mysqli" "php8.1-cli" "php8.1-cgi" "php8.1-fpm" "php8.1-zip" "php-pear" "php-imagick" "php8.1-curl" "php8.1-mbstring" "php8.1-bcmath" "php8.1-xml" "php8.1-soap" "php8.1-opcache" "php8.1-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php8.1-dev" "libapache2-mod-php8.1" "php8.1-memcached" "composer")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 
 # Install CertBot
@@ -107,7 +107,7 @@ ln -s /snap/bin/certbot /usr/bin/certbot
 # Set up unattended upgrades
 printf $DIVIDER
 echo "Set up unattended Upgrades..."
-apt-get -y -q=2 install unattended-upgrades
+apt-get -y -qq --no-install-recommends install unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # Set password for www-data user and allow shell access
@@ -548,7 +548,7 @@ printf $DIVIDER
 echo "Install MySQL"
 
 echo "Installing MySQL server and client..."
-apt-get -y -q=2 install mysql-server mysql-client
+apt-get -y -qq --no-install-recommends install mysql-server mysql-client
 if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
 	echo "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig"
 	cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig

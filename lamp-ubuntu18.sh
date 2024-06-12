@@ -68,36 +68,36 @@ PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "mytop" "nethogs" "zip" "unzi
 for PCKG in "${PCKGS[@]}"
 do
 	echo "$PCKG"
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 printf "Install Apache...\n"
 PCKGS=("apache2" "apache2-doc" "apachetop" "libapache2-mod-php" "libapache2-mod-fcgid" "apache2-suexec-pristine" "libapache2-mod-security2")
 for PCKG in "${PCKGS[@]}"
 do
 	echo "$PCKG"
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 printf "Install PHP...\n"
-PCKGS=("mcrypt" "imagemagick" "php7.2" "php7.2-common" "php7.2-gd" "php7.2-imap" "php7.2-mysql" "php7.2-mysqli" "php7.2-cli" "php7.2-cgi" "php7.2-fpm" "php7.2-zip" "php-pear" "php-imagick" "php7.2-curl" "php7.2-mbstring" "php7.2-bcmath" "php7.2-xml" "php7.2-soap" "php7.2-opcache" "php7.2-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php7.2-dev" "libapache2-mod-php7.2" "php7.2-memcached" "php-auth" "php-mcrypt" "composer")
+PCKGS=("mcrypt" "imagemagick" "php7.2" "php7.2-common" "php7.2-gd" "php7.2-imap" "php7.2-mysql" "php7.2-mysqli" "php7.2-cli" "php7.2-cgi" "php7.2-fpm" "php7.2-zip" "php-pear" "php-imagick" "php7.2-curl" "php7.2-mbstring" "php7.2-bcmath" "php7.2-xml" "php7.2-soap" "php7.2-opcache" "php7.2-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php7.2-dev" "libapache2-mod-php7.2" "php7.2-memcached" "composer")
 for PCKG in "${PCKGS[@]}"
 do
 	echo "$PCKG"
-	apt-get -y -q=2 install ${PCKG}
+	apt-get -y -qq --no-install-recommends install ${PCKG}
 done
 
 # Install MySQL
 printf "Install MySQL...\n"
-apt-get -y -q=2 install mysql-server mysql-client
+apt-get -y -qq --no-install-recommends install mysql-server mysql-client
 
 # Install CertBot
 printf "Install CertBot...\n"
 add-apt-repository -y ppa:certbot/certbot
 apt-get update
-apt-get -y -q=2 install python-certbot-apache
+apt-get -y -qq --no-install-recommends install python-certbot-apache
 
 # Set up unattended upgrades
 printf "Set up unattended Upgrades...\n"
-apt-get -y -q=2 install unattended-upgrades
+apt-get -y -qq --no-install-recommends install unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # Set password for www-data user and allow shell access
