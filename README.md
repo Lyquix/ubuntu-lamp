@@ -2,14 +2,14 @@
 
 Bash scripts to automatically setup LAMP server following best practices.
 
-Current version: `lamp-ubuntu22.sh`
+Current version: `lamp-ubuntu24.sh`
 
 ## How to use
 
   * Log in to your fresh Ubuntu server as root
-  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu22.sh`
-  * Change permissions: `chmod 755 lamp-ubuntu22.sh`
-  * Run and follow prompts: `./lamp-ubuntu22.sh`
+  * Download the most recent version of the script: `wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/lamp-ubuntu24.sh`
+  * Change permissions: `chmod +x lamp-ubuntu24.sh`
+  * Run and follow prompts: `./lamp-ubuntu24.sh`
 
 ## What does this script do?
 
@@ -27,6 +27,9 @@ Current version: `lamp-ubuntu22.sh`
   * Setup basic firewall rules
   * Setup fail2ban
   * Setup mod_security
+  * Sets up production, staging and development environments and databases
+  * Encrypts database and other credentials
+  * Automatically generates wp-config.php, wp-secrets.php, .htaccess, .htpassword
 
 ## Installed Software
 
@@ -53,44 +56,42 @@ Current version: `lamp-ubuntu22.sh`
     * iptables-persistent
   * Apache and modules
     * apache2
-    * apache2-doc
     * apachetop
     * libapache2-mod-php
     * libapache2-mod-fcgid
     * apache2-suexec-pristine
     * libapache2-mod-security2
-  * PHP 8.1
+  * PHP 8.3
     * mcrypt
     * imagemagick
-    * php8.1
-    * php8.1-common
-    * php8.1-gd
-    * php8.1-imap
-    * php8.1-mysql
-    * php8.1-mysqli
-    * php8.1-cli
-    * php8.1-cgi
-    * php8.1-zip
+    * php8.3
+    * php8.3-common
+    * php8.3-gd
+    * php8.3-imap
+    * php8.3-mysql
+    * php8.3-mysqli
+    * php8.3-cli
+    * php8.3-cgi
+    * php8.3-zip
     * php-pear
     * php-auth
     * php-mcrypt
     * php-imagick
-    * php8.1-curl
-    * php8.1-mbstring
-    * php8.1-bcmath
-    * php8.1-xml
-    * php8.1-soap
-    * php8.1-opcache
-    * php8.1-intl
+    * php8.3-curl
+    * php8.3-mbstring
+    * php8.3-bcmath
+    * php8.3-xml
+    * php8.3-soap
+    * php8.3-opcache
+    * php8.3-intl
     * php-apcu
     * php-mail
     * php-mail-mime
-    * php8.1-memcached
+    * php8.3-memcached
     * php-all-dev
-    * php8.1-dev
-    * libapache2-mod-php8.1
+    * php8.3-dev
+    * libapache2-mod-php8.3
   * MySQL
-  * NodeJS 12
 
 ## Apache Configuration
 
@@ -108,26 +109,21 @@ Current version: `lamp-ubuntu22.sh`
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options sameorigin
     Header unset X-Powered-By
-    Header set X-UA-Compatible "IE=edge"
-    Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure
     Header set X-XSS-Protection "1; mode=block"
+    SetEnv WPCONFIG_ENCKEY ENC_KEY
+    SetEnv WPCONFIG_ENCIV ENC_IV
+
+    # Disable unused HTTP request methods
+    <LimitExcept GET POST HEAD OPTIONS>
+      deny from all
+    </LimitExcept>
 </Directory>
-
-# Disable HTTP 1.0
-RewriteEngine On
-RewriteCond %{THE_REQUEST} !HTTP/1.1$
-RewriteRule .* - [F]
-
-# Disable unused HTTP request methods
-<LimitExcept GET POST HEAD>
-deny from all
-</LimitExcept>
 
 # Disable Trace HTTP request
 TraceEnable off
 
-# Disable SSL v2 & v3
-SSLProtocol –ALL +TLSv1.2 +TLSv1.3
+# Disable SSL and TLS under v1.2
+SSLProtocol TLSv1.2
 
 # Disable server signature
 ServerSignature Off
