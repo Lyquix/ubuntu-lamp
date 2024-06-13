@@ -781,8 +781,7 @@ $_WP_SECRETS = (function () {
 		'{{production_domain}}' => 'production',
 		'www.{{production_domain}}' => 'production',
 		'{{staging_domain}}' => 'staging',
-		'{{development_domain}}' => 'development',
-		'example.test' => 'local'
+		'{{development_domain}}' => 'development'
 	];
 
 	// Configuration of all environments
@@ -922,6 +921,9 @@ for salt in "${salt_names[@]}"; do
     perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 done
 
+# Change file ownership
+chown www-data:www-data /srv/www/wp-secrets.php
+
 # Create wp-config.php file
 printf $DIVIDER
 echo "Create /srv/www/wp-config.php file"
@@ -979,6 +981,9 @@ require_once(ABSPATH . 'wp-settings.php');
 EOF
 )"
 echo -e "$WP_CONFIG" > /srv/www/wp-config.php
+
+# Change file ownership
+chown www-data:www-data /srv/www/wp-config.php
 
 # Create .htaccess file
 printf $DIVIDER
@@ -1046,12 +1051,14 @@ echo -e "$HTACCESS" > /srv/www/.htaccess
 # Loop through each environment
 for env in "${environments[@]}"; do
 	echo "Processing $env"
-
 	# Update domains
-    FIND="{{${env}_domain}}"
-    REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/.htaccess
+	FIND="{{${env}_domain}}"
+	REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/.htaccess
 done
+
+# Change file ownership
+chown www-data:www-data /srv/www/.htaccess
 
 # Create .htpasswd file
 printf $DIVIDER
@@ -1059,6 +1066,214 @@ echo "Create .htpasswd file"
 # Remove any subdomains and the TLD from the username
 HTUSER=$(echo $domain | awk -F'.' '{print $(NF-1)}')
 htpasswd -bc /srv/www/.htpasswd $HTUSER review
+
+# Change file ownership
+chown www-data:www-data /srv/www/.htpasswd
+
+# Copy it to each environments
+for env in "${environments[@]}"; do
+	cp /srv/www/deploy-config.php /srv/www/${domains[$env]}/public_html/deploy-config.php
+done
+
+# PHP Deploy script config
+printf $DIVIDER
+echo "PHP Deploy script config"
+
+# Prompt to continue
+while true; do
+	read -p "Do you want to setup PHP Deploy script? [Y/N]? " cnt2
+	case $cnt2 in
+		[Yy]* )
+			# Get the home directory of www-data
+			WWW_DATA_HOME=$(getent passwd www-data | cut -d: -f6)
+
+			# Create ~/.ssh directory for www-data user
+			echo "Creating $WWW_DATA_HOME/.ssh directory for www-data user"
+			sudo -u www-data mkdir $WWW_DATA_HOME/.ssh
+
+			echo "Creating the deployment key..."
+			sudo -u www-data ssh-keygen -t rsa -N '' -f $WWW_DATA_HOME/.ssh/php-git-deploy_key
+
+			echo "Creating a SSH config file..."
+			sudo -u www-data printf "Host github.com\n\tIdentityFile ~/.ssh/php-git-deploy_key\nHost bitbucket.org\n\tIdentityFile ~/.ssh/php-git-deploy_key\n" > $WWW_DATA_HOME/.ssh/config
+
+			echo "Enter the git repository address"
+			echo "You may use HTTPS URL like https://github.com/username/reponame.git"
+			echo "or SSH address like git@bitbucket.org:username/reponame.git"
+
+			while true; do
+				read -p "Enter git repository address: " gitaddr
+				case $gitaddr in
+					"" ) echo "Git address may not be left blank";;
+					* ) break;;
+				esac
+			done
+
+			while true; do
+				read -p "Enter the production branch name (e.g. master, or main): " branch
+				case $branch in
+					"" ) echo "Branch name may not be left blank";;
+					* ) break;;
+				esac
+			done
+
+			while true; do
+				read -p "Enter the staging branch name (e.g. staging): " stg_branch
+				case $stg_branch in
+					"" ) echo "Branch name may not be left blank";;
+					* ) break;;
+				esac
+			done
+
+			while true; do
+				read -p "Enter the development branch name (e.g. development): " dev_branch
+				case $dev_branch in
+					"" ) echo "Branch name may not be left blank";;
+					* ) break;;
+				esac
+			done
+
+			# Declare associative array of branches
+			declare -A branches=(
+				[production]=$branch
+				[staging]=$stg_branch
+				[development]=$dev_branch
+			)
+
+			# Clone the repository
+			echo "You must copy this deployment key in your repository settings in GitHub or Bitbucket"
+			sudo -u www-data cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub
+			read -p "Press Enter when ready to continue..."
+			echo "Cloning the repository to establish SSH keys"
+			echo "Answer Yes when prompted and ignore the permission denied error message"
+			sudo -u www-data mkdir -p $WWW_DATA_HOME/git
+			cd $WWW_DATA_HOME/git
+			sudo -u www-data git clone --depth=1 --branch $branch $gitaddr
+			sudo -u www-data rm -rf $WWW_DATA_HOME/git
+
+			echo "Create /srv/www/deploy-config.php file"
+			DEPLOYCONFIG="$(cat << 'EOF'
+<?php
+
+$_DEPLOY_SECRETS = (function () {
+	// Map domains to environment names
+	$environment = [
+		'{{production_domain}}' => 'production',
+		'www.{{production_domain}}' => 'production',
+		'{{staging_domain}}' => 'staging',
+		'{{development_domain}}' => 'development'
+	];
+
+	// Configuration of all environments
+	// - use arrays to map environments to different values
+	// - use strings when the value doesn't change between environments
+	$config = [
+		'BRANCH' => [ // Branch is never encrypted
+			'production' => '{{production_branch}}',
+			'staging' => '{{staging_branch}}',
+			'development' => '{{development_branch}}',
+		],
+		'ACCESS_TOKEN' => [
+			'production' => '{{production_token}}',
+			'staging' => '{{staging_token}}',
+			'development' => '{{development_token}}',
+		],
+		'BASE_DIR' => [ // Base directory is never encrypted
+			'production' => '/srv/www/{{production_domain}}',
+			'staging' => '/srv/www/{{staging_domain}}',
+			'development' => '/srv/www/{{development_domain}}',
+		]
+	];
+
+	// Determine the current environment, default to local
+	$env = 'local';
+	if (array_key_exists(strtolower($_SERVER['HTTP_HOST']), $environment)) {
+		$env = $environment[strtolower($_SERVER['HTTP_HOST'])];
+	}
+
+	// Get encryption key
+	$key = hex2bin(getenv('WPCONFIG_ENCKEY'));
+	$iv = hex2bin(getenv('WPCONFIG_ENCIV'));
+
+	// Decrypt secrets
+	$secrets = [];
+	foreach ($config as $var => $val) {
+		$secrets[$var] = $val[$env];
+		// Decrypt the value
+		if ($var == 'ACCESS_TOKEN') {
+			$secrets[$var] = openssl_decrypt($secrets[$var], "AES-256-CBC", $key, 0, $iv);
+		}
+	}
+
+	return $secrets;
+})();
+
+define('DISABLED', false);
+define('IP_ALLOW', serialize([]));
+define('REMOTE_REPOSITORY', '{{gitaddr}}');
+define('BRANCH', serialize([$_DEPLOY_SECRETS['BRANCH']]));
+define('ACCESS_TOKEN', $_DEPLOY_SECRETS['ACCESS_TOKEN']);
+define('GIT_DIR', $_DEPLOY_SECRETS['BASE_DIR'] . '/git/');
+define('TARGET_DIR', $_DEPLOY_SECRETS['BASE_DIR'] . '/public_html/');
+define('LOG_FILE', $_DEPLOY_SECRETS['BASE_DIR'] . '/logs/deploy.log');
+define('EMAIL_NOTIFICATIONS', '');
+define('TIME_LIMIT', 60);
+define('EXCLUDE_FILES', serialize(['.git']));
+define('RSYNC_FLAGS', '-rltgoDzvO');
+define('COMMANDS_BEFORE_RSYNC', serialize([]));
+define('COMMANDS_AFTER_RSYNC', serialize([]));
+define('CLEANUP_WORK_TREE', false);
+define('CALLBACK_CLASSES', []);
+define('PLUGINS_FOLDER','plugins/');
+EOF
+)"
+			echo -e "$DEPLOYCONFIG" > /srv/www/deploy-config.php
+
+			# Loop through each environment
+			for env in "${environments[@]}"; do
+				echo "Processing $env"
+
+				# Update domains
+				FIND="{{${env}_domain}}"
+				REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
+				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+
+				# Update branches
+				FIND="{{${env}_branch}}"
+				REPLACE=$(printf '%s\n' "${branches[$env]}" | sed 's/[\&/]/\\&/g')
+				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+
+				# Generate and update access tokens and encrypt it
+				ACCESS_TOKEN=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
+				if [ "$env" == "production" ]; then
+					printf "Use webhook: https://${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+				else
+					printf "Use webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+				fi
+				ACCESS_TOKEN=$(echo $ACCESS_TOKEN | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
+				FIND="{{${env}_token}}"
+				REPLACE=$(printf '%s\n' "$ACCESS_TOKEN" | sed 's/[\&/]/\\&/g')
+				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+
+				# Update the GIT address
+				FIND="{{gitaddr}}"
+				REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g')
+				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			done
+
+			# Change file ownership
+			chown www-data:www-data /srv/www/deploy-config.php
+
+			# Copy it to each environment
+			for env in "${environments[@]}"; do
+				cp /srv/www/deploy-config.php /srv/www/${domains[$env]}/public_html/deploy-config.php
+			done
+
+			break;;
+		[Nn]* ) break;;
+		* ) echo "Please answer Y or N";;
+	esac
+done
 
 # Set firewall rules
 printf $DIVIDER
