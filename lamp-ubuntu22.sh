@@ -812,7 +812,7 @@ $_WP_SECRETS = (function () {
 			'production' => 'localhost',
 			'staging' => 'localhost',
 			'development' => 'localhost',
-			'local' => 'localhost'
+			'local' => '127.0.0.1'
 		],
 		// WordPress keys and salts
 		'AUTH_KEY' => '{{AUTH_KEY}}',
@@ -968,8 +968,8 @@ $table_prefix  = 'wp_';
  * For developers: WordPress debugging mode.
  */
 define('WP_DEBUG', true);
-define('WP_DEBUG_DISPLAY', $_WPCONFIG['WP_DEBUG_DISPLAY']);
-define('WP_DEBUG_LOG', !$_WPCONFIG['WP_DEBUG_DISPLAY']);
+define('WP_DEBUG_DISPLAY', $_WP_SECRETS['WP_DEBUG_DISPLAY']);
+define('WP_DEBUG_LOG', !$_WP_SECRETS['WP_DEBUG_DISPLAY']);
 
 /* That's all, stop editing! Happy blogging. */
 
