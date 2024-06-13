@@ -1072,7 +1072,7 @@ chown www-data:www-data /srv/www/.htpasswd
 
 # Copy it to each environments
 for env in "${environments[@]}"; do
-	cp /srv/www/deploy-config.php /srv/www/${domains[$env]}/public_html/deploy-config.php
+	cp /srv/www/.htaccess /srv/www/${domains[$env]}/public_html
 done
 
 # PHP Deploy script config
@@ -1261,12 +1261,15 @@ EOF
 				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
 			done
 
+			echo "Download php-git-deploy script..."
+			wget https://raw.githubusercontent.com/Lyquix/php-git-deploy/master/deploy.php -O /srv/www/deploy.php
+
 			# Change file ownership
-			chown www-data:www-data /srv/www/deploy-config.php
+			chown www-data:www-data /srv/www/deploy*
 
 			# Copy it to each environment
 			for env in "${environments[@]}"; do
-				cp /srv/www/deploy-config.php /srv/www/${domains[$env]}/public_html/deploy-config.php
+				cp /srv/www/deploy* /srv/www/${domains[$env]}/public_html
 			done
 
 			break;;
