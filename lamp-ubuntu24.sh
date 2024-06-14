@@ -5,8 +5,8 @@
 
 # Check if script is being run by root
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root!"
-   exit 1
+	echo "This script must be run as root!"
+	exit 1
 fi
 
 DIVIDER="\n\n********************************************************************************\n\n"
@@ -39,9 +39,9 @@ printf $DIVIDER
 while true; do
 	read -p "Continue [Y/N]? " cnt1
 	case $cnt1 in
-		[Yy]* ) break;;
-		[Nn]* ) exit;;
-		* ) echo "Please answer Y or N";;
+	[Yy]*) break ;;
+	[Nn]*) exit ;;
+	*) echo "Please answer Y or N" ;;
 	esac
 done
 
@@ -55,7 +55,7 @@ log_msg "Encryption IV: $ENC_IV"
 # Change the swappiness to 10
 printf $DIVIDER
 echo "Change swappiness to 10"
-echo "vm.swappiness = 10" >> /etc/sysctl.conf
+echo "vm.swappiness = 10" >>/etc/sysctl.conf
 sysctl -p
 
 # Set the hostname
@@ -65,13 +65,13 @@ echo "Pick a hostname that identifies this server."
 while true; do
 	read -p "Hostname: " host
 	case $host in
-		"" ) echo "Hostname may not be left blank";;
-		* ) break;;
+	"") echo "Hostname may not be left blank" ;;
+	*) break ;;
 	esac
 done
-echo "$host" > /etc/hostname
+echo "$host" >/etc/hostname
 hostname -F /etc/hostname
-printf "127.2.1       $host\n::1             $host\n" >> /etc/hosts;
+printf "127.2.1       $host\n::1             $host\n" >>/etc/hosts
 
 # Set the time zone
 printf $DIVIDER
@@ -94,22 +94,19 @@ echo "Upgrade installed packages..."
 apt-get -y -q upgrade
 echo "Installing utilities..."
 PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
-for PCKG in "${PCKGS[@]}"
-do
+for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 echo "Installing Apache..."
 PCKGS=("apache2" "apachetop" "libapache2-mod-php" "libapache2-mod-fcgid" "apache2-suexec-pristine" "libapache2-mod-security2")
-for PCKG in "${PCKGS[@]}"
-do
+for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 echo "Installing PHP..."
 PCKGS=("mcrypt" "imagemagick" "php8.3" "php8.3-common" "php8.3-gd" "php8.3-imap" "php8.3-mysql" "php8.3-mysqli" "php8.3-cli" "php8.3-cgi" "php8.3-fpm" "php8.3-zip" "php-pear" "php-imagick" "php8.3-curl" "php8.3-mbstring" "php8.3-bcmath" "php8.3-xml" "php8.3-soap" "php8.3-opcache" "php8.3-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php8.3-dev" "libapache2-mod-php8.3" "php8.3-memcached" "composer")
-for PCKG in "${PCKGS[@]}"
-do
+for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
 done
@@ -147,7 +144,7 @@ echo "Automatic Apache server restart configuration"
 mkdir -p /etc/systemd/system/apache2.service.d
 
 # Write the override configuration to restart Apache automatically
-cat <<EOF > /etc/systemd/system/apache2.service.d/override.conf
+cat <<EOF >/etc/systemd/system/apache2.service.d/override.conf
 [Service]
 Restart=always
 RestartSec=5s
@@ -187,7 +184,8 @@ perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 echo "Adding security settings and caching..."
 FIND="#<\/Directory>"
-REPLACE="$(cat << 'EOF'
+REPLACE="$(
+	cat <<'EOF'
 #</Directory>
 
 # Disable Trace HTTP request
@@ -209,14 +207,15 @@ Header unset ETag
 FileETag None
 EOF
 )"
-REPLACE=${REPLACE//\//\\\/} # Escape the / characters
+REPLACE=${REPLACE//\//\\\/}   # Escape the / characters
 REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
-REPLACE=${REPLACE//\$/\\$} # Escape the $ characters
+REPLACE=${REPLACE//\$/\\$}    # Escape the $ characters
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
 echo "Adding <Directory /srv/www/> configuration for /srv/www..."
 FIND="#<\/Directory>"
-REPLACE="$(cat << 'EOF'
+REPLACE="$(
+	cat <<'EOF'
 #</Directory>
 
 <Directory /srv/www/>
@@ -243,7 +242,7 @@ EOF
 # Replace the placeholders with actual values
 REPLACE=${REPLACE//ENC_KEY/$ENC_KEY}
 REPLACE=${REPLACE//ENC_IV/$ENC_IV}
-REPLACE=${REPLACE//\//\\\/} # Escape the / characters
+REPLACE=${REPLACE//\//\\\/}   # Escape the / characters
 REPLACE=${REPLACE//$'\n'/\\n} # Escape the new line characters
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/apache2.conf
 
@@ -287,13 +286,13 @@ if [ ! -f /etc/apache2/mods-available/mpm_event.conf.orig ]; then
 fi
 
 # APACHE memory settings
-CPUS=$(nproc) # Number of CPUs
-PROCMEM=32 # Average amount of memory used by each request
+CPUS=$(nproc)                                                          # Number of CPUs
+PROCMEM=32                                                             # Average amount of memory used by each request
 SYSMEM=$(grep MemTotal /proc/meminfo | awk '{ printf "%d", $2/1024 }') # System memory in MB (rounded down)
-AVAILMEM=$(( (SYSMEM-256)*75/100 )) # Memory available to Apache: (Total - 256MB) x 75%
-MAXWORKERS=$(( AVAILMEM/PROCMEM )) # Max number of request workers: available memory / average request memory
-MAXTHREADS=$(( MAXWORKERS/CPUS )) # Max number of threads
-MAXSPARETHREADS=$(( MAXTHREADS*2 )) # Max number of spare threads
+AVAILMEM=$(((SYSMEM - 256) * 75 / 100))                                # Memory available to Apache: (Total - 256MB) x 75%
+MAXWORKERS=$((AVAILMEM / PROCMEM))                                     # Max number of request workers: available memory / average request memory
+MAXTHREADS=$((MAXWORKERS / CPUS))                                      # Max number of threads
+MAXSPARETHREADS=$((MAXTHREADS * 2))                                    # Max number of spare threads
 
 echo "Updating memory settings..."
 FIND="^\s*StartServers\s*[0-9]*"
@@ -337,7 +336,7 @@ if ! grep -q /srv/www/*/logs/ "/etc/logrotate.d/apache2"; then
 	create 644 www-data www-data
 }
 "
-	echo -e "$LOGROTATE" >> /etc/logrotate.d/apache2
+	echo -e "$LOGROTATE" >>/etc/logrotate.d/apache2
 fi
 
 #ModPageSpeed
@@ -368,8 +367,8 @@ echo " * Setup the necessary directories"
 while true; do
 	read -p "Please enter the main domain (e.g. example.com, without www): " domain
 	case $domain in
-		"" ) echo "Domain may not be left blank";;
-		* ) break;;
+	"") echo "Domain may not be left blank" ;;
+	*) break ;;
 	esac
 done
 
@@ -378,12 +377,13 @@ echo "Suggested staging domain: $stg_domain"
 while true; do
 	read -p "Would you like to keep this as your staging domain? [Y/n] " answer
 	case "$answer" in
-		[Yy]*|"") # Accept default or yes
-			break;;
-		[Nn]* ) # Enter a new value
-			read -p "Enter your staging domain: " stg_domain
-			break;;
-		* ) echo "Please answer yes or no.";;
+	[Yy]* | "") # Accept default or yes
+		break ;;
+	[Nn]*) # Enter a new value
+		read -p "Enter your staging domain: " stg_domain
+		break
+		;;
+	*) echo "Please answer yes or no." ;;
 	esac
 done
 
@@ -392,12 +392,13 @@ echo "Suggested development domain: $dev_domain"
 while true; do
 	read -p "Would you like to keep this as your development domain? [Y/n] " answer
 	case "$answer" in
-		[Yy]*|"") # Accept default or yes
-			break;;
-		[Nn]* ) # Enter a new value
-			read -p "Enter your development domain: " dev_domain
-			break;;
-		* ) echo "Please answer yes or no.";;
+	[Yy]* | "") # Accept default or yes
+		break ;;
+	[Nn]*) # Enter a new value
+		read -p "Enter your development domain: " dev_domain
+		break
+		;;
+	*) echo "Please answer yes or no." ;;
 	esac
 done
 
@@ -434,8 +435,8 @@ VIRTUALHOST="<VirtualHost *:80>
 	ErrorLog /srv/www/$domain/logs/error.log
 	CustomLog /srv/www/$domain/logs/access.log combined
 	SetEnv WPCONFIG_ENVNAME production
-</VirtualHost>\n";
-echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$domain.conf
+</VirtualHost>\n"
+echo -e "$VIRTUALHOST" >/etc/apache2/sites-available/$domain.conf
 
 # Staging
 VIRTUALHOST="<VirtualHost *:80>
@@ -444,8 +445,8 @@ VIRTUALHOST="<VirtualHost *:80>
 	ErrorLog /srv/www/$stg_domain/logs/error.log
 	CustomLog /srv/www/$stg_domain/logs/access.log combined
 	SetEnv WPCONFIG_ENVNAME staging
-</VirtualHost>\n";
-echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$stg_domain.conf
+</VirtualHost>\n"
+echo -e "$VIRTUALHOST" >/etc/apache2/sites-available/$stg_domain.conf
 
 # Development
 VIRTUALHOST="<VirtualHost *:80>
@@ -454,8 +455,8 @@ VIRTUALHOST="<VirtualHost *:80>
 	ErrorLog /srv/www/dev.$domain/logs/error.log
 	CustomLog /srv/www/dev.$domain/logs/access.log combined
 	SetEnv WPCONFIG_ENVNAME development
-</VirtualHost>\n";
-echo -e "$VIRTUALHOST" > /etc/apache2/sites-available/$dev_domain.conf
+</VirtualHost>\n"
+echo -e "$VIRTUALHOST" >/etc/apache2/sites-available/$dev_domain.conf
 
 # Create directories
 mkdir -p /srv/www/$domain/public_html
@@ -527,9 +528,9 @@ if [ ! -f /etc/php/8.3/fpm/pool.d/www.conf.orig ]; then
 	cp /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf.orig
 fi
 
-MAXCHILDREN=$(( MAXWORKERS/8 )) # Max number of PHP-FPM processes
-STARTSERVERS=$(( CPUS*4 ))
-MINSPARESERVERS=$(( CPUS*2 ))
+MAXCHILDREN=$((MAXWORKERS / 8)) # Max number of PHP-FPM processes
+STARTSERVERS=$((CPUS * 4))
+MINSPARESERVERS=$((CPUS * 2))
 
 FIND="^\s*pm\.max_children\s*=\s*.*"
 REPLACE="pm.max_children = $MAXCHILDREN"
@@ -560,7 +561,6 @@ echo "Restarting PHP-FPM and Apache..."
 service php8.3-fpm start
 service apache2 restart
 
-
 # Install MySQL
 printf $DIVIDER
 echo "Install MySQL"
@@ -580,7 +580,7 @@ mkdir -p /etc/systemd/system/mysql.service.d
 
 # Write the override configuration to restart MySQL automatically
 echo "Automatic MySQL server restart configuration"
-cat <<EOF > /etc/systemd/system/mysql.service.d/override.conf
+cat <<EOF >/etc/systemd/system/mysql.service.d/override.conf
 [Service]
 Restart=always
 RestartSec=5s
@@ -598,8 +598,8 @@ systemctl restart mysql
 while true; do
 	read -sp "Enter NEW password for MySQL root: " mysqlrootpsw
 	case $mysqlrootpsw in
-		"" ) echo "Password may not be left blank";;
-		* ) break;;
+	"") echo "Password may not be left blank" ;;
+	*) break ;;
 	esac
 done
 mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$mysqlrootpsw';"
@@ -622,66 +622,66 @@ echo "\nPlease set name for databases, users and passwords"
 while true; do
 	read -p "Production database name (recommended: use domain without TLD, for mydomain.com use mydomain): " dbname
 	case $dbname in
-		"" ) echo "Database name may not be left blank";;
-		* ) break;;
+	"") echo "Database name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -p "Production database user (recommended: use same as database name, max 16 characters): " dbuser
 	case $dbuser in
-		"" ) echo "User name may not be left blank";;
-		* ) break;;
+	"") echo "User name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -sp "Production database password: " dbpass
 	case $dbpass in
-		"" ) echo "\nPassword may not be left blank";;
-		* ) break;;
+	"") echo "\nPassword may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	printf "\n"
 	read -p "Staging database name (recommended: use domain without TLD followed by _stg, for mydomain.com use mydomain_stg): " stgdbname
 	case $stgdbname in
-		"" ) echo "Database name may not be left blank";;
-		* ) break;;
+	"") echo "Database name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -p "Staging database user (recommended: use same as database name, max 16 characters): " stgdbuser
 	case $stgdbuser in
-		"" ) echo "User name may not be left blank";;
-		* ) break;;
+	"") echo "User name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -sp "Staging database password: " stgdbpass
 	case $stgdbpass in
-		"" ) echo "\nPassword may not be left blank";;
-		* ) break;;
+	"") echo "\nPassword may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	printf "\n"
 	read -p "Development database name (recommended: use domain without TLD followed by _dev, for mydomain.com use mydomain_dev): " devdbname
 	case $devdbname in
-		"" ) echo "Database name may not be left blank";;
-		* ) break;;
+	"") echo "Database name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -p "Development database user (recommended: use same as database name, max 16 characters): " devdbuser
 	case $devdbuser in
-		"" ) echo "User name may not be left blank";;
-		* ) break;;
+	"") echo "User name may not be left blank" ;;
+	*) break ;;
 	esac
 done
 while true; do
 	read -sp "Development database password: " devdbpass
 	case $devdbpass in
-		"" ) echo "\nPassword may not be left blank";;
-		* ) break;;
+	"") echo "\nPassword may not be left blank" ;;
+	*) break ;;
 	esac
 done
 
@@ -707,36 +707,36 @@ environments=(production staging development)
 
 # Loop through each environment
 for env in "${environments[@]}"; do
-    echo "Processing environment: $env"
+	echo "Processing environment: $env"
 
-    # Encrypt and handle database name
-    dbname_value="${dbnames[$env]}"
-    encrypted_dbname_value=$(echo -n "$dbname_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
-    dbnames[$env]=$encrypted_dbname_value
+	# Encrypt and handle database name
+	dbname_value="${dbnames[$env]}"
+	encrypted_dbname_value=$(echo -n "$dbname_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
+	dbnames[$env]=$encrypted_dbname_value
 	log_msg "$env dbname: $dbname_value"
 
-    # Encrypt and handle database user
-    dbuser_value="${dbusers[$env]}"
-    encrypted_dbuser_value=$(echo -n "$dbuser_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
-    dbusers[$env]=$encrypted_dbuser_value
+	# Encrypt and handle database user
+	dbuser_value="${dbusers[$env]}"
+	encrypted_dbuser_value=$(echo -n "$dbuser_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
+	dbusers[$env]=$encrypted_dbuser_value
 	log_msg "$env dbuser: $dbuser_value"
 
-    # Encrypt and handle database password
-    dbpass_value="${dbpasss[$env]}"
+	# Encrypt and handle database password
+	dbpass_value="${dbpasss[$env]}"
 	encrypted_dbpass_value=$(echo -n "$dbpass_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
-    dbpasss[$env]=$encrypted_dbpass_value
+	dbpasss[$env]=$encrypted_dbpass_value
 	log_msg "$env dbpass: $dbpass_value"
 
 	# Create database
-    echo "Create database $dbname_value..."
-    mysql -u root -p"$mysqlrootpsw" -e "CREATE DATABASE $dbname_value;"
-    # Create user with the original password
-    echo "Create user $dbuser_value..."
-    mysql -u root -p"$mysqlrootpsw" -e "CREATE USER '$dbuser_value'@'localhost' IDENTIFIED BY '$dbpass_value';"
+	echo "Create database $dbname_value..."
+	mysql -u root -p"$mysqlrootpsw" -e "CREATE DATABASE $dbname_value;"
+	# Create user with the original password
+	echo "Create user $dbuser_value..."
+	mysql -u root -p"$mysqlrootpsw" -e "CREATE USER '$dbuser_value'@'localhost' IDENTIFIED BY '$dbpass_value';"
 
-    # Grant privileges
-    echo "Grant $dbuser_value all privileges on $dbname_value..."
-    mysql -u root -p"$mysqlrootpsw" -e "GRANT ALL PRIVILEGES ON $dbname_value.* TO '$dbuser_value'@'localhost';"
+	# Grant privileges
+	echo "Grant $dbuser_value all privileges on $dbname_value..."
+	mysql -u root -p"$mysqlrootpsw" -e "GRANT ALL PRIVILEGES ON $dbname_value.* TO '$dbuser_value'@'localhost';"
 done
 
 echo "Restart MySQL..."
@@ -744,9 +744,9 @@ service mysql restart
 
 echo "Add automatic database dump and rotation..."
 #write out current crontab
-crontab -l > mycron.txt
+crontab -l >mycron.txt
 #echo new cron into cron file
-cat >> mycron.txt <<EOL
+cat >>mycron.txt <<EOL
 # Daily 00:00 - database check and optimization
 0 0 * * * mysqlcheck -Aos -u root -p'$mysqlrootpsw' > /dev/null 2>&1
 
@@ -782,13 +782,14 @@ rm mycron.txt
 
 if [ ! -f /etc/logrotate.d/mysql-backup ]; then
 	echo "Creating database backup rotation and compression file"
-	printf "# Daily\n/var/lib/mysql/daily.sql {\n\t daily\n\t missingok\n\t rotate 7\n\t compress\n\t copy\n}\n\n# Weekly\n/var/lib/mysql/weekly.sql {\n\t weekly\n\t missingok\n\t rotate 4\n\t compress\n\t copy\n}\n\n# Monthly\n/var/lib/mysql/monthly.sql {\n\t monthly\n\t missingok\n\t rotate 12\n\t compress\n\t copy\n}\n" > /etc/logrotate.d/mysql-backup
+	printf "# Daily\n/var/lib/mysql/daily.sql {\n\t daily\n\t missingok\n\t rotate 7\n\t compress\n\t copy\n}\n\n# Weekly\n/var/lib/mysql/weekly.sql {\n\t weekly\n\t missingok\n\t rotate 4\n\t compress\n\t copy\n}\n\n# Monthly\n/var/lib/mysql/monthly.sql {\n\t monthly\n\t missingok\n\t rotate 12\n\t compress\n\t copy\n}\n" >/etc/logrotate.d/mysql-backup
 fi
 
 # Create wp-secrets.php file
 printf $DIVIDER
 echo "Create /srv/www/wp-secrets.php file"
-WP_SECRETS="$(cat << 'EOF'
+WP_SECRETS="$(
+	cat <<'EOF'
 <?php
 // Generated by Lyquix Ubuntu LAMP Setup Script
 // https://github.com/Lyquix/ubuntu-lamp
@@ -889,7 +890,7 @@ $_WP_SECRETS = (function () {
 })();
 EOF
 )"
-echo -e "$WP_SECRETS" > /srv/www/wp-secrets.php
+echo -e "$WP_SECRETS" >/srv/www/wp-secrets.php
 
 # Loop through each environment
 echo "Save encrypted database credentials"
@@ -897,24 +898,24 @@ for env in "${environments[@]}"; do
 	echo "Processing $env"
 
 	# Update domains
-    FIND="{{${env}_domain}}"
-    REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	FIND="{{${env}_domain}}"
+	REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 
-    # Update database names
-    FIND="{{${env}_dbname}}"
-    REPLACE=$(printf '%s\n' "${dbnames[$env]}" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	# Update database names
+	FIND="{{${env}_dbname}}"
+	REPLACE=$(printf '%s\n' "${dbnames[$env]}" | sed 's/[\&/]/\\&/g')
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 
-    # Update database users
-    FIND="{{${env}_dbuser}}"
-    REPLACE=$(printf '%s\n' "${dbusers[$env]}" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	# Update database users
+	FIND="{{${env}_dbuser}}"
+	REPLACE=$(printf '%s\n' "${dbusers[$env]}" | sed 's/[\&/]/\\&/g')
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 
-    # Update database passwords
-    FIND="{{${env}_dbpass}}"
-    REPLACE=$(printf '%s\n' "${dbpasss[$env]}" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	# Update database passwords
+	FIND="{{${env}_dbpass}}"
+	REPLACE=$(printf '%s\n' "${dbpasss[$env]}" | sed 's/[\&/]/\\&/g')
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 done
 
 # Declare an associative array to hold the salt names
@@ -922,7 +923,7 @@ echo "Get WordPress salts"
 salt_names=("AUTH_KEY" "SECURE_AUTH_KEY" "LOGGED_IN_KEY" "NONCE_KEY" "AUTH_SALT" "SECURE_AUTH_SALT" "LOGGED_IN_SALT" "NONCE_SALT")
 
 # Generate WordPress salts
-SALTS=$( { curl -s https://api.wordpress.org/secret-key/1.1/salt/; } )
+SALTS=$({ curl -s https://api.wordpress.org/secret-key/1.1/salt/; })
 
 # Loop through the salt names and process each one
 for salt in "${salt_names[@]}"; do
@@ -936,7 +937,7 @@ for salt in "${salt_names[@]}"; do
 
 	FIND="{{${salt}}}"
 	REPLACE=$(printf '%s\n' "$encrypted_value" | sed 's/[\&/]/\\&/g')
-    perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
 done
 
 # Change file ownership
@@ -945,7 +946,8 @@ chown www-data:www-data /srv/www/wp-secrets.php
 # Create wp-config.php file
 printf $DIVIDER
 echo "Create /srv/www/wp-config.php file"
-WP_CONFIG="$(cat << 'EOF'
+WP_CONFIG="$(
+	cat <<'EOF'
 <?php
 // Generated by Lyquix Ubuntu LAMP Setup Script
 // https://github.com/Lyquix/ubuntu-lamp
@@ -998,7 +1000,7 @@ if ( !defined('ABSPATH') ) define('ABSPATH', dirname(__FILE__) . '/');
 require_once(ABSPATH . 'wp-settings.php');
 EOF
 )"
-echo -e "$WP_CONFIG" > /srv/www/wp-config.php
+echo -e "$WP_CONFIG" >/srv/www/wp-config.php
 
 # Change file ownership
 chown www-data:www-data /srv/www/wp-config.php
@@ -1006,7 +1008,8 @@ chown www-data:www-data /srv/www/wp-config.php
 # Create .htaccess file
 printf $DIVIDER
 echo "Create /srv/www/.htaccess file"
-HTACCESS="$(cat << 'EOF'
+HTACCESS="$(
+	cat <<'EOF'
 # Generated by Lyquix Ubuntu LAMP Setup Script
 # https://github.com/Lyquix/ubuntu-lamp
 
@@ -1064,7 +1067,7 @@ RewriteRule . /index.php [L]
 # END WordPress
 EOF
 )"
-echo -e "$HTACCESS" > /srv/www/.htaccess
+echo -e "$HTACCESS" >/srv/www/.htaccess
 
 # Loop through each environment
 for env in "${environments[@]}"; do
@@ -1104,76 +1107,77 @@ echo "PHP Deploy script config"
 while true; do
 	read -p "Do you want to setup PHP Deploy script? [Y/N]? " cnt2
 	case $cnt2 in
-		[Yy]* )
-			# Get the home directory of www-data
-			WWW_DATA_HOME=$(getent passwd www-data | cut -d: -f6)
+	[Yy]*)
+		# Get the home directory of www-data
+		WWW_DATA_HOME=$(getent passwd www-data | cut -d: -f6)
 
-			# Create ~/.ssh directory for www-data user
-			echo "Creating $WWW_DATA_HOME/.ssh directory for www-data user"
-			sudo -u www-data mkdir $WWW_DATA_HOME/.ssh
+		# Create ~/.ssh directory for www-data user
+		echo "Creating $WWW_DATA_HOME/.ssh directory for www-data user"
+		sudo -u www-data mkdir $WWW_DATA_HOME/.ssh
 
-			echo "Creating the deployment key..."
-			sudo -u www-data ssh-keygen -t rsa -N '' -f $WWW_DATA_HOME/.ssh/php-git-deploy_key
+		echo "Creating the deployment key..."
+		sudo -u www-data ssh-keygen -t rsa -N '' -f $WWW_DATA_HOME/.ssh/php-git-deploy_key
 
-			echo "Creating a SSH config file..."
-			sudo -u www-data printf "Host github.com\n\tIdentityFile ~/.ssh/php-git-deploy_key\nHost bitbucket.org\n\tIdentityFile ~/.ssh/php-git-deploy_key\n" > $WWW_DATA_HOME/.ssh/config
+		echo "Creating a SSH config file..."
+		sudo -u www-data printf "Host github.com\n\tIdentityFile ~/.ssh/php-git-deploy_key\nHost bitbucket.org\n\tIdentityFile ~/.ssh/php-git-deploy_key\n" >$WWW_DATA_HOME/.ssh/config
 
-			echo "Enter the git repository address"
-			echo "You may use HTTPS URL like https://github.com/username/reponame.git"
-			echo "or SSH address like git@bitbucket.org:username/reponame.git"
+		echo "Enter the git repository address"
+		echo "You may use HTTPS URL like https://github.com/username/reponame.git"
+		echo "or SSH address like git@bitbucket.org:username/reponame.git"
 
-			while true; do
-				read -p "Enter git repository address: " gitaddr
-				case $gitaddr in
-					"" ) echo "Git address may not be left blank";;
-					* ) break;;
-				esac
-			done
+		while true; do
+			read -p "Enter git repository address: " gitaddr
+			case $gitaddr in
+			"") echo "Git address may not be left blank" ;;
+			*) break ;;
+			esac
+		done
 
-			while true; do
-				read -p "Enter the production branch name (e.g. master, or main): " branch
-				case $branch in
-					"" ) echo "Branch name may not be left blank";;
-					* ) break;;
-				esac
-			done
+		while true; do
+			read -p "Enter the production branch name (e.g. master, or main): " branch
+			case $branch in
+			"") echo "Branch name may not be left blank" ;;
+			*) break ;;
+			esac
+		done
 
-			while true; do
-				read -p "Enter the staging branch name (e.g. staging): " stg_branch
-				case $stg_branch in
-					"" ) echo "Branch name may not be left blank";;
-					* ) break;;
-				esac
-			done
+		while true; do
+			read -p "Enter the staging branch name (e.g. staging): " stg_branch
+			case $stg_branch in
+			"") echo "Branch name may not be left blank" ;;
+			*) break ;;
+			esac
+		done
 
-			while true; do
-				read -p "Enter the development branch name (e.g. development): " dev_branch
-				case $dev_branch in
-					"" ) echo "Branch name may not be left blank";;
-					* ) break;;
-				esac
-			done
+		while true; do
+			read -p "Enter the development branch name (e.g. development): " dev_branch
+			case $dev_branch in
+			"") echo "Branch name may not be left blank" ;;
+			*) break ;;
+			esac
+		done
 
-			# Declare associative array of branches
-			declare -A branches=(
-				[production]=$branch
-				[staging]=$stg_branch
-				[development]=$dev_branch
-			)
+		# Declare associative array of branches
+		declare -A branches=(
+			[production]=$branch
+			[staging]=$stg_branch
+			[development]=$dev_branch
+		)
 
-			# Clone the repository
-			echo "You must copy this deployment key in your repository settings in GitHub or Bitbucket"
-			log_msg "Deployment key:"
-			log_msg $(cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub)
-			read -p "Press Enter when ready to continue..."
-			echo "Cloning the repository to establish SSH keys"
-			echo "Answer Yes when prompted and ignore the permission denied error message"
-			sudo -u www-data mkdir -p $WWW_DATA_HOME/git
-			sudo -u www-data git clone --depth=1 --branch $branch $gitaddr $WWW_DATA_HOME/git
-			sudo -u www-data rm -rf $WWW_DATA_HOME/git
+		# Clone the repository
+		echo "You must copy this deployment key in your repository settings in GitHub or Bitbucket"
+		log_msg "Deployment key:"
+		log_msg $(cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub)
+		read -p "Press Enter when ready to continue..."
+		echo "Cloning the repository to establish SSH keys"
+		echo "Answer Yes when prompted and ignore the permission denied error message"
+		sudo -u www-data mkdir -p $WWW_DATA_HOME/git
+		sudo -u www-data git clone --depth=1 --branch $branch $gitaddr $WWW_DATA_HOME/git
+		sudo -u www-data rm -rf $WWW_DATA_HOME/git
 
-			echo "Create /srv/www/deploy-config.php file"
-			DEPLOYCONFIG="$(cat << 'EOF'
+		echo "Create /srv/www/deploy-config.php file"
+		DEPLOYCONFIG="$(
+			cat <<'EOF'
 <?php
 
 $_DEPLOY_SECRETS = (function () {
@@ -1247,55 +1251,56 @@ define('CLEANUP_WORK_TREE', false);
 define('CALLBACK_CLASSES', []);
 define('PLUGINS_FOLDER','plugins/');
 EOF
-)"
-			echo -e "$DEPLOYCONFIG" > /srv/www/deploy-config.php
+		)"
+		echo -e "$DEPLOYCONFIG" >/srv/www/deploy-config.php
 
-			# Loop through each environment
-			for env in "${environments[@]}"; do
-				echo "Processing $env"
+		# Loop through each environment
+		for env in "${environments[@]}"; do
+			echo "Processing $env"
 
-				# Update domains
-				FIND="{{${env}_domain}}"
-				REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			# Update domains
+			FIND="{{${env}_domain}}"
+			REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
 
-				# Update branches
-				FIND="{{${env}_branch}}"
-				REPLACE=$(printf '%s\n' "${branches[$env]}" | sed 's/[\&/]/\\&/g')
-				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			# Update branches
+			FIND="{{${env}_branch}}"
+			REPLACE=$(printf '%s\n' "${branches[$env]}" | sed 's/[\&/]/\\&/g')
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
 
-				# Generate and update access tokens and encrypt it
-				ACCESS_TOKEN=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
-				if [ "$env" == "production" ]; then
-					log_msg "$env webhook: https://${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
-				else
-					log_msg "$env webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
-				fi
-				ACCESS_TOKEN=$(echo $ACCESS_TOKEN | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
-				FIND="{{${env}_token}}"
-				REPLACE=$(printf '%s\n' "$ACCESS_TOKEN" | sed 's/[\&/]/\\&/g')
-				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			# Generate and update access tokens and encrypt it
+			ACCESS_TOKEN=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
+			if [ "$env" == "production" ]; then
+				log_msg "$env webhook: https://${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+			else
+				log_msg "$env webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+			fi
+			ACCESS_TOKEN=$(echo $ACCESS_TOKEN | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
+			FIND="{{${env}_token}}"
+			REPLACE=$(printf '%s\n' "$ACCESS_TOKEN" | sed 's/[\&/]/\\&/g')
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
 
-				# Update the GIT address
-				FIND="{{gitaddr}}"
-				REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g')
-				perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
-			done
+			# Update the GIT address
+			FIND="{{gitaddr}}"
+			REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g')
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+		done
 
-			echo "Download php-git-deploy script..."
-			wget https://raw.githubusercontent.com/Lyquix/php-git-deploy/master/deploy.php -O /srv/www/deploy.php
+		echo "Download php-git-deploy script..."
+		wget https://raw.githubusercontent.com/Lyquix/php-git-deploy/master/deploy.php -O /srv/www/deploy.php
 
-			# Change file ownership
-			chown www-data:www-data /srv/www/deploy*
+		# Change file ownership
+		chown www-data:www-data /srv/www/deploy*
 
-			# Copy it to each environment
-			for env in "${environments[@]}"; do
-				cp /srv/www/deploy* /srv/www/${domains[$env]}/public_html
-			done
+		# Copy it to each environment
+		for env in "${environments[@]}"; do
+			cp /srv/www/deploy* /srv/www/${domains[$env]}/public_html
+		done
 
-			break;;
-		[Nn]* ) break;;
-		* ) echo "Please answer Y or N";;
+		break
+		;;
+	[Nn]*) break ;;
+	*) echo "Please answer Y or N" ;;
 	esac
 done
 
@@ -1325,8 +1330,8 @@ ip6tables -P FORWARD DROP
 
 echo "Saving firewall rules..."
 mkdir /etc/iptables
-iptables-save > /etc/iptables/rules.v4
-ip6tables-save > /etc/iptables/rules.v6
+iptables-save >/etc/iptables/rules.v4
+ip6tables-save >/etc/iptables/rules.v6
 
 # Set fail2ban jails
 printf $DIVIDER
@@ -1365,8 +1370,8 @@ enabled = true
 
 [php-url-fopen]
 enabled = true
-";
-echo -e "$FAIL2BANJAILS" > /etc/fail2ban/jail.local
+"
+echo -e "$FAIL2BANJAILS" >/etc/fail2ban/jail.local
 service fail2ban restart
 
 # Get OWASP rules for ModSecurity
@@ -1397,7 +1402,8 @@ perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/security2.conf
 # Set up Bad Bots Blocker
 printf $DIVIDER
 echo "Set up Bad Bot Blocker..."
-echo "$(cat << 'EOF'
+echo "$(
+	cat <<'EOF'
 #!/bin/bash
 
 REPO="https://raw.githubusercontent.com/mitchellkrogza/apache-ultimate-bad-bot-blocker/master/Apache_2.4/custom.d"
@@ -1427,7 +1433,7 @@ service apache2 reload
 
 exit 0
 EOF
-)" > /usr/sbin/apache-bad-bot-blocker.sh
+)" >/usr/sbin/apache-bad-bot-blocker.sh
 chmod 744 /usr/sbin/apache-bad-bot-blocker.sh
 /usr/sbin/apache-bad-bot-blocker.sh
 
@@ -1437,6 +1443,6 @@ echo "The script executing has finished!"
 echo "Please check the log file /srv/www/lamp-ubuntu24.log for important information and any errors."
 
 # Save the log at the end
-printf "%s\n" "${LOGMSG[@]}" >> /srv/www/lamp-ubuntu24.log
+printf "%s\n" "${LOGMSG[@]}" >>/srv/www/lamp-ubuntu24.log
 
 exit
