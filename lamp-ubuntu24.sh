@@ -11,9 +11,28 @@ fi
 
 DIVIDER="\n\n********************************************************************************\n\n"
 
+# Echo to the console and save to a file
+LOGMSG=("$DIVIDER" "$(date '+%Y-%m-%d %H:%M:%S')")
+log_msg() {
+	local MSG="$1"
+	printf "%s\n" "$MSG"
+	LOGMSG+=("$MSG")
+	return 0
+}
+
+# Trap errors and save them to log file
+trap_error() {
+	local status=$?
+	if [ $status -ne 0 ]; then
+		local source="${BASH_COMMAND}"
+		LOGMSG+=("[Exit Code: $status] $source")
+	fi
+}
+trap 'trap_error' DEBUG
+
 # Welcome and instructions
 printf $DIVIDER
-echo "Lyquix LAMP server setup on Ubuntu 24.04"
+log_msg "Lyquix LAMP server setup on Ubuntu 24.04"
 printf $DIVIDER
 
 # Prompt to continue
@@ -29,9 +48,9 @@ done
 printf $DIVIDER
 echo "Generating AES-256-CBC encryption key and initialization vector in hexadecimal"
 ENC_KEY=$(openssl rand -hex 32)
-echo "Encryption Key: $ENC_KEY"
+log_msg "Encryption Key: $ENC_KEY"
 ENC_IV=$(openssl rand -hex 16)
-echo "Encryption IV: $ENC_IV"
+log_msg "Encryption IV: $ENC_IV"
 
 # Change the swappiness to 10
 printf $DIVIDER
@@ -42,7 +61,7 @@ sysctl -p
 # Set the hostname
 printf $DIVIDER
 echo "HOSTNAME"
-printf "Pick a hostname that identifies this server.\nRecommended: use the main domain, e.g. www.example.com\n"
+echo "Pick a hostname that identifies this server."
 while true; do
 	read -p "Hostname: " host
 	case $host in
@@ -65,35 +84,34 @@ dpkg-reconfigure tzdata
 printf $DIVIDER
 echo "INSTALL AND UPDATE SOFTWARE"
 echo "Now the script will update Ubuntu and install all the necessary software."
-echo " * You will be prompted to enter the password for the MySQL root user"
 read -p "Please ENTER to continue "
 
 # Do not prompt asking about restarting
 export NEEDRESTART_MODE=a
 echo "Repository update..."
-apt-get update --fix-missing
+apt-get -y -q --fix-missing update
 echo "Upgrade installed packages..."
-apt-get -y upgrade
+apt-get -y -q upgrade
 echo "Installing utilities..."
 PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -qq --no-install-recommends install ${PCKG}
+	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 echo "Installing Apache..."
 PCKGS=("apache2" "apachetop" "libapache2-mod-php" "libapache2-mod-fcgid" "apache2-suexec-pristine" "libapache2-mod-security2")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -qq --no-install-recommends install ${PCKG}
+	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 echo "Installing PHP..."
 PCKGS=("mcrypt" "imagemagick" "php8.3" "php8.3-common" "php8.3-gd" "php8.3-imap" "php8.3-mysql" "php8.3-mysqli" "php8.3-cli" "php8.3-cgi" "php8.3-fpm" "php8.3-zip" "php-pear" "php-imagick" "php8.3-curl" "php8.3-mbstring" "php8.3-bcmath" "php8.3-xml" "php8.3-soap" "php8.3-opcache" "php8.3-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php8.3-dev" "libapache2-mod-php8.3" "php8.3-memcached" "composer")
 for PCKG in "${PCKGS[@]}"
 do
 	echo " * Installing $PCKG..."
-	apt-get -y -qq --no-install-recommends install ${PCKG}
+	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 
 # Install CertBot
@@ -107,7 +125,7 @@ ln -s /snap/bin/certbot /usr/bin/certbot
 # Set up unattended upgrades
 printf $DIVIDER
 echo "Set up unattended Upgrades..."
-apt-get -y -qq --no-install-recommends install unattended-upgrades
+apt-get -y -q --no-install-recommends install unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # Set password for www-data user and allow shell access
@@ -383,9 +401,9 @@ while true; do
 	esac
 done
 
-echo "Main domain: $domain"
-echo "Staging domain: $stg_domain"
-echo "Development domain: $dev_domain"
+log_msg "Main domain: $domain"
+log_msg "Staging domain: $stg_domain"
+log_msg "Development domain: $dev_domain"
 
 # Declare associative array of domains
 declare -A domains=(
@@ -548,7 +566,7 @@ printf $DIVIDER
 echo "Install MySQL"
 
 echo "Installing MySQL server and client..."
-apt-get -y -qq --no-install-recommends install mysql-server mysql-client
+apt-get -y -q --no-install-recommends install mysql-server mysql-client
 if [ ! -f /etc/mysql/mysql.conf.d/mysqld.cnf.orig ]; then
 	echo "Backing up my.cnf configuration file to /etc/mysql/mysql.conf.d/mysqld.cnf.orig"
 	cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.orig
@@ -695,19 +713,19 @@ for env in "${environments[@]}"; do
     dbname_value="${dbnames[$env]}"
     encrypted_dbname_value=$(echo -n "$dbname_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
     dbnames[$env]=$encrypted_dbname_value
-	echo " * dbname: $encrypted_dbname_value"
+	log_msg "$env dbname: $dbname_value"
 
     # Encrypt and handle database user
     dbuser_value="${dbusers[$env]}"
     encrypted_dbuser_value=$(echo -n "$dbuser_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
     dbusers[$env]=$encrypted_dbuser_value
-	echo " * dbuser: $encrypted_dbuser_value"
+	log_msg "$env dbuser: $dbuser_value"
 
     # Encrypt and handle database password
     dbpass_value="${dbpasss[$env]}"
 	encrypted_dbpass_value=$(echo -n "$dbpass_value" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
     dbpasss[$env]=$encrypted_dbpass_value
-	echo " * dbpass: $encrypted_dbpass_value"
+	log_msg "$env dbpass: $dbpass_value"
 
 	# Create database
     echo "Create database $dbname_value..."
@@ -904,14 +922,14 @@ echo "Get WordPress salts"
 salt_names=("AUTH_KEY" "SECURE_AUTH_KEY" "LOGGED_IN_KEY" "NONCE_KEY" "AUTH_SALT" "SECURE_AUTH_SALT" "LOGGED_IN_SALT" "NONCE_SALT")
 
 # Generate WordPress salts
-SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
+SALTS=$( { curl -s https://api.wordpress.org/secret-key/1.1/salt/; } )
 
 # Loop through the salt names and process each one
 for salt in "${salt_names[@]}"; do
-	echo "Processing $salt"
-
 	# Extract the salt value
 	value=$(echo "$SALTS" | grep "'$salt'" | awk -F"'" '{print $4}')
+
+	log_msg "$salt: $value"
 
 	# Encrypt the value
 	encrypted_value=$(echo $value | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
@@ -1067,6 +1085,9 @@ echo "Create .htpasswd file"
 HTUSER=$(echo $domain | awk -F'.' '{print $(NF-1)}')
 htpasswd -bc /srv/www/.htpasswd $HTUSER review
 
+log_msg "HTUSER: $HTUSER"
+log_msg "HTPASSWD: review"
+
 # Change file ownership
 chown www-data:www-data /srv/www/.htpasswd
 
@@ -1142,13 +1163,13 @@ while true; do
 
 			# Clone the repository
 			echo "You must copy this deployment key in your repository settings in GitHub or Bitbucket"
-			sudo -u www-data cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub
+			log_msg "Deployment key:"
+			log_msg $(cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub)
 			read -p "Press Enter when ready to continue..."
 			echo "Cloning the repository to establish SSH keys"
 			echo "Answer Yes when prompted and ignore the permission denied error message"
 			sudo -u www-data mkdir -p $WWW_DATA_HOME/git
-			cd $WWW_DATA_HOME/git
-			sudo -u www-data git clone --depth=1 --branch $branch $gitaddr
+			sudo -u www-data git clone --depth=1 --branch $branch $gitaddr $WWW_DATA_HOME/git
 			sudo -u www-data rm -rf $WWW_DATA_HOME/git
 
 			echo "Create /srv/www/deploy-config.php file"
@@ -1246,9 +1267,9 @@ EOF
 				# Generate and update access tokens and encrypt it
 				ACCESS_TOKEN=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
 				if [ "$env" == "production" ]; then
-					printf "Use webhook: https://${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+					log_msg "$env webhook: https://${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
 				else
-					printf "Use webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
+					log_msg "$env webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
 				fi
 				ACCESS_TOKEN=$(echo $ACCESS_TOKEN | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
 				FIND="{{${env}_token}}"
@@ -1412,6 +1433,10 @@ chmod 744 /usr/sbin/apache-bad-bot-blocker.sh
 
 # The End
 printf $DIVIDER
-echo "The script executing has finished. Please check messages for any errors."
+echo "The script executing has finished!"
+echo "Please check the log file /srv/www/lamp-ubuntu24.log for important information and any errors."
+
+# Save the log at the end
+printf "%s\n" "${LOGMSG[@]}" >> /srv/www/lamp-ubuntu24.log
 
 exit
