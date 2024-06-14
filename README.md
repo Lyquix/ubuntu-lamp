@@ -14,22 +14,26 @@ Current version: `lamp-ubuntu24.sh`
 ## What does this script do?
 
   * Checks that you are root
-  * Set the hostname. In general it is a good idea to use the real domain for your site as hostname.
+  * Set the hostname
+  * Set the time zone
   * Update packages from repo
-  * Install utility software, Apache, PHP and MySQL (see detailed list below)
+  * Install utility software, Apache, PHP, PHP-FPM and MySQL (see detailed list below)
   * Setup unattended upgrades
   * Change www-data user password, and allow shell access
   * Apache configuration (see details below)
   * PHP configuration
+  * PHP-FPM configuration
   * MySQL configuration
+  * Sets up production, staging and development environments and databases
+  * Encrypts database and other credentials
   * Configure log rotation
+  * Automatic service restart for Apache and MySQL
   * Setup automatic daily database dump and rotation
   * Setup basic firewall rules
   * Setup fail2ban
   * Setup mod_security
-  * Sets up production, staging and development environments and databases
-  * Encrypts database and other credentials
-  * Automatically generates wp-config.php, wp-secrets.php, .htaccess, .htpassword
+  * Setup bad bots blocker
+  * Automatically generates wp-config.php, wp-secrets.php, .htaccess, .htpassword, and deploy-config.php
 
 ## Installed Software
 
@@ -161,12 +165,5 @@ upload_max_filesize = 20M
 
 ## MySQL Configuration
 
-```
-key_buffer = 16M
-max_allowed_packet = 16M
-thread_stack = 192K
-thread_cache_size = 8
-table_cache = 64
-log_slow_queries = /var/log/mysql/mysql-slow.log
-long_query_time = 1
-```
+Uses optimized MySQL configuration from [Fotis Evangelou](https://gist.github.com/fevangelou)
+[https://gist.github.com/fevangelou/0da9941e67a9c9bb2596](https://gist.github.com/fevangelou/0da9941e67a9c9bb2596)
