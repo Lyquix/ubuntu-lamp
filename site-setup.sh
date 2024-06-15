@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Ubuntu Add Site
+# Site Setup script for Ubuntu LAMP
 # https://github.com/Lyquix/ubuntu-lamp
 
 # Check if script is being run by root
