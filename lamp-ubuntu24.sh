@@ -1304,6 +1304,16 @@ EOF
 	esac
 done
 
+echo "Download site-setup.sh script..."
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.php
+chown www-data:www-data /srv/www/site-setup.php
+chmod +x /srv/www/site-setup.php
+
+echo "Download file-permissions.sh script..."
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/file-permissions.sh -O /srv/www/file-permissions.php
+chown www-data:www-data /srv/www/file-permissions.php
+chmod +x /srv/www/file-permissions.php
+
 # Set firewall rules
 printf $DIVIDER
 echo "Setting up firewall rules..."
