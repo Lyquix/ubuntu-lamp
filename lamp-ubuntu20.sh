@@ -160,7 +160,7 @@ systemctl enable apache2
 systemctl restart apache2
 
 echo "Apache modules..."
-a2dismod php7.4
+a2dismod php7.4 mpm_prefork
 a2enmod expires headers rewrite ssl suphp proxy_fcgi setenvif mpm_event http2 security2
 
 echo "Apache configurations..."
