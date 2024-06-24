@@ -93,7 +93,7 @@ apt-get -y -q --fix-missing update
 echo "Upgrade installed packages..."
 apt-get -y -q upgrade
 echo "Installing utilities..."
-PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "fail2ban" "iptables-persistent" "software-properties-common")
+PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "redis-server" "redis-tools" "fail2ban" "iptables-persistent" "software-properties-common")
 for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
@@ -105,7 +105,7 @@ for PCKG in "${PCKGS[@]}"; do
 	apt-get -y -q --no-install-recommends install ${PCKG}
 done
 echo "Installing PHP..."
-PCKGS=("mcrypt" "imagemagick" "php7.4" "php7.4-common" "php7.4-gd" "php7.4-imap" "php7.4-mysql" "php7.4-mysqli" "php7.4-cli" "php7.4-cgi" "php7.4-fpm" "php7.4-zip" "php-pear" "php-imagick" "php7.4-curl" "php7.4-mbstring" "php7.4-bcmath" "php7.4-xml" "php7.4-soap" "php7.4-opcache" "php7.4-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php7.4-dev" "libapache2-mod-php7.4" "php7.4-memcached" "composer")
+PCKGS=("mcrypt" "imagemagick" "php7.4" "php7.4-common" "php7.4-gd" "php7.4-imap" "php7.4-mysql" "php7.4-mysqli" "php7.4-cli" "php7.4-cgi" "php7.4-fpm" "php7.4-zip" "php-pear" "php-imagick" "php7.4-curl" "php7.4-mbstring" "php7.4-bcmath" "php7.4-xml" "php7.4-soap" "php7.4-opcache" "php7.4-intl" "php-apcu" "php-mail" "php-mail-mime" "php-all-dev" "php7.4-dev" "libapache2-mod-php7.4" "php7.4-memcached" "php7.4-redis" "composer")
 for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
@@ -338,23 +338,6 @@ if ! grep -q /srv/www/*/logs/ "/etc/logrotate.d/apache2"; then
 "
 	echo -e "$LOGROTATE" >>/etc/logrotate.d/apache2
 fi
-
-#ModPageSpeed
-printf $DIVIDER
-echo "MODPAGESPEED"
-wget https://dl-ssl.google.com/dl/linux/direct/mod-pagespeed-stable_current_amd64.deb
-dpkg -i mod-pagespeed*.deb
-rm mod-pagespeed*.deb
-apt-get -f install
-
-if [ ! -f /etc/apache2/mods-available/pagespeed.conf.orig ]; then
-	echo "Backing up original ModPagespeed configuration file to /etc/apache2/mods-available/pagespeed.conf.orig"
-	cp /etc/apache2/mods-available/pagespeed.conf /etc/apache2/mods-available/pagespeed.conf.orig
-fi
-echo "Set ModPagespeed filters to CoreFilters..."
-FIND="^\s*#*\s*ModPagespeedRewriteLevel\s+PassThrough"
-REPLACE="\tModPagespeedRewriteLevel CoreFilters"
-perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/pagespeed.conf
 
 # Virtual Hosts
 printf $DIVIDER
