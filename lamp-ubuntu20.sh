@@ -853,7 +853,7 @@ $_WP_SECRETS = (function () {
 		$secrets[$var] = is_array($val) ? $val[$env] : $val;
 		// Decrypt the value
 		if (!in_array($var, ['DB_HOST', 'WP_DEBUG_DISPLAY']) && $env !== 'local') {
-			$secrets[$var] = openssl_decrypt($secrets[$var], "AES-256-CBC", $key, 0, $iv);
+			$secrets[$var] = trim(openssl_decrypt($secrets[$var], "AES-256-CBC", $key, 0, $iv));
 		}
 		// Generate the WordPress keys and salts for local environment
 		if ((strpos($var, '_KEY') !== false || strpos($var, '_SALT') !== false) && $env === 'local') {
@@ -1211,7 +1211,7 @@ $_DEPLOY_SECRETS = (function () {
 		$secrets[$var] = $val[$env];
 		// Decrypt the value
 		if ($var == 'ACCESS_TOKEN') {
-			$secrets[$var] = openssl_decrypt($secrets[$var], "AES-256-CBC", $key, 0, $iv);
+			$secrets[$var] = trim(openssl_decrypt($secrets[$var], "AES-256-CBC", $key, 0, $iv));
 		}
 	}
 
