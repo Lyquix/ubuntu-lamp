@@ -1152,7 +1152,7 @@ while true; do
 		# Clone the repository
 		echo "You must copy this deployment key in your repository settings in GitHub or Bitbucket"
 		log_msg "Deployment key:"
-		log_msg $(cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub)
+		log_msg "$(cat $WWW_DATA_HOME/.ssh/php-git-deploy_key.pub)"
 		read -p "Press Enter when ready to continue..."
 		echo "Cloning the repository to establish SSH keys"
 		echo "Answer Yes when prompted and ignore the permission denied error message"
@@ -1290,14 +1290,14 @@ EOF
 done
 
 echo "Download site-setup.sh script..."
-wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.php
-chown www-data:www-data /srv/www/site-setup.php
-chmod +x /srv/www/site-setup.php
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.sh
+chown www-data:www-data /srv/www/site-setup.sh
+chmod +x /srv/www/site-setup.sh
 
 echo "Download file-permissions.sh script..."
-wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/file-permissions.sh -O /srv/www/file-permissions.php
-chown www-data:www-data /srv/www/file-permissions.php
-chmod +x /srv/www/file-permissions.php
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/file-permissions.sh -O /srv/www/file-permissions.sh
+chown www-data:www-data /srv/www/file-permissions.sh
+chmod +x /srv/www/file-permissions.sh
 
 # Set firewall rules
 printf $DIVIDER
