@@ -1079,7 +1079,7 @@ chown www-data:www-data /srv/www/.htpasswd
 
 # Copy it to each environments
 for env in "${environments[@]}"; do
-	cp /srv/www/.htpasswd /srv/www/${domains[$env]}/public_html
+	cp /srv/www/.htpasswd /srv/www/${domains[$env]}
 done
 
 # PHP Deploy script config

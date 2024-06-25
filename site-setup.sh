@@ -579,7 +579,7 @@ EOF
 
 			# Copy it to each environments
 			for env in "${environments[@]}"; do
-				cp /srv/www/.htpasswd /srv/www/${domains[$env]}/public_html
+				cp /srv/www/.htpasswd /srv/www/${domains[$env]}
 			done
 
 			break
