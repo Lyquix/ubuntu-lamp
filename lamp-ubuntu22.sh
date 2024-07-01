@@ -1265,7 +1265,7 @@ EOF
 
 			# Update the GIT address
 			FIND="{{gitaddr}}"
-			REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g')
+			REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g; s/@/\\@/g')
 			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
 		done
 
