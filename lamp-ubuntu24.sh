@@ -224,11 +224,15 @@ REPLACE="$(
 	Require all granted
 	IncludeOptional /etc/apache2/custom.d/globalblacklist.conf
 	Header set Access-Control-Allow-Origin "*"
+	Header set Access-Control-Allow-Methods "GET, POST, HEAD, OPTIONS"
 	Header set Timing-Allow-Origin: "*"
 	Header set X-Content-Type-Options "nosniff"
-	Header set X-Frame-Options sameorigin
+	Header set X-Frame-Options "sameorigin"
 	Header unset X-Powered-By
+	Header unset Server
 	Header set X-XSS-Protection "1; mode=block"
+	Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	Header set Referrer-Policy "same-origin"
 	SetEnv WPCONFIG_ENCKEY ENC_KEY
 	SetEnv WPCONFIG_ENCIV ENC_IV
 
