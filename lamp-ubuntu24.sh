@@ -52,6 +52,11 @@ log_msg "Encryption Key: $ENC_KEY"
 ENC_IV=$(openssl rand -hex 16)
 log_msg "Encryption IV: $ENC_IV"
 
+# Create setup directory to store log file and generated configuration files
+SETUP_DIR="/srv/www/setup-$(date +"%Y%m%d-%H%M%S")"
+echo "Creating setup directory $SETUP_DIR to store log and generated configuration files"
+mkdir -p "$SETUP_DIR"
+
 # Change the swappiness to 10
 printf $DIVIDER
 echo "Change swappiness to 10"
@@ -774,7 +779,7 @@ fi
 
 # Create wp-secrets.php file
 printf $DIVIDER
-echo "Create /srv/www/wp-secrets.php file"
+echo "Create $SETUP_DIR/wp-secrets.php file"
 WP_SECRETS="$(
 	cat <<'EOF'
 <?php
@@ -840,8 +845,13 @@ $_WP_SECRETS = (function () {
 
 	// Determine the current environment, default to local
 	$env = 'local';
-	if (array_key_exists(strtolower($_SERVER['HTTP_HOST']), $environment)) {
-		$env = $environment[strtolower($_SERVER['HTTP_HOST'])];
+	if (array_key_exists($domain, $environment)) {
+		$env = $environment[$domain];
+	} elseif (preg_match('#/srv/www/([^/]+)/public_html#', __DIR__, $matches)) {
+		$dir = $matches[1];
+		if (array_key_exists($dir, $environment)) {
+			$env = $environment[$dir];
+		}
 	}
 
 	// Get encryption key
@@ -877,7 +887,7 @@ $_WP_SECRETS = (function () {
 })();
 EOF
 )"
-echo -e "$WP_SECRETS" >/srv/www/wp-secrets.php
+echo -e "$WP_SECRETS" >$SETUP_DIR/wp-secrets.php
 
 # Loop through each environment
 echo "Save encrypted database credentials"
@@ -887,22 +897,22 @@ for env in "${environments[@]}"; do
 	# Update domains
 	FIND="{{${env}_domain}}"
 	REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/wp-secrets.php
 
 	# Update database names
 	FIND="{{${env}_dbname}}"
 	REPLACE=$(printf '%s\n' "${dbnames[$env]}" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/wp-secrets.php
 
 	# Update database users
 	FIND="{{${env}_dbuser}}"
 	REPLACE=$(printf '%s\n' "${dbusers[$env]}" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/wp-secrets.php
 
 	# Update database passwords
 	FIND="{{${env}_dbpass}}"
 	REPLACE=$(printf '%s\n' "${dbpasss[$env]}" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/wp-secrets.php
 done
 
 # Declare an associative array to hold the salt names
@@ -924,15 +934,15 @@ for salt in "${salt_names[@]}"; do
 
 	FIND="{{${salt}}}"
 	REPLACE=$(printf '%s\n' "$encrypted_value" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/wp-secrets.php
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/wp-secrets.php
 done
 
 # Change file ownership
-chown www-data:www-data /srv/www/wp-secrets.php
+chown www-data:www-data $SETUP_DIR/wp-secrets.php
 
 # Create wp-config.php file
 printf $DIVIDER
-echo "Create /srv/www/wp-config.php file"
+echo "Create $SETUP_DIR/wp-config.php file"
 WP_CONFIG="$(
 	cat <<'EOF'
 <?php
@@ -987,12 +997,12 @@ if ( !defined('ABSPATH') ) define('ABSPATH', dirname(__FILE__) . '/');
 require_once(ABSPATH . 'wp-settings.php');
 EOF
 )"
-echo -e "$WP_CONFIG" >/srv/www/wp-config.php
+echo -e "$WP_CONFIG" >$SETUP_DIR/wp-config.php
 
 # Change file ownership
-chown www-data:www-data /srv/www/wp-config.php
+chown www-data:www-data $SETUP_DIR/wp-config.php
 
-# Create .htaccess file - NOTE: ommitting the leading dot to prevent this file from being active in /srv/www
+# Create .htaccess file
 printf $DIVIDER
 echo "Create .htaccess file"
 HTACCESS="$(
@@ -1054,7 +1064,7 @@ RewriteRule . /index.php [L]
 # END WordPress
 EOF
 )"
-echo -e "$HTACCESS" >/srv/www/htaccess
+echo -e "$HTACCESS" >$SETUP_DIR/.htaccess
 
 # Loop through each environment
 for env in "${environments[@]}"; do
@@ -1062,29 +1072,24 @@ for env in "${environments[@]}"; do
 	# Update domains
 	FIND="{{${env}_domain}}"
 	REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/htaccess
+	perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/.htaccess
 done
 
 # Change file ownership
-chown www-data:www-data /srv/www/htaccess
+chown www-data:www-data $SETUP_DIR/.htaccess
 
-# Create .htpasswd file - NOTE: ommitting the leading dot to prevent this file from being active in /srv/www
+# Create .htpasswd file
 printf $DIVIDER
 echo "Create .htpasswd file"
 # Remove any subdomains and the TLD from the username
 HTUSER=$(echo $domain | awk -F'.' '{print $(NF-1)}')
-htpasswd -bc /srv/www/htpasswd $HTUSER review
+htpasswd -bc $SETUP_DIR/.htpasswd $HTUSER review
 
 log_msg "HTUSER: $HTUSER"
 log_msg "HTPASSWD: review"
 
 # Change file ownership
-chown www-data:www-data /srv/www/htpasswd
-
-# Copy it to each environments
-for env in "${environments[@]}"; do
-	cp /srv/www/htpasswd /srv/www/${domains[$env]}/.htpasswd
-done
+chown www-data:www-data $SETUP_DIR/.htpasswd
 
 # PHP Deploy script config
 printf $DIVIDER
@@ -1162,7 +1167,7 @@ while true; do
 		sudo -u www-data git clone --depth=1 --branch $branch $gitaddr $WWW_DATA_HOME/git
 		sudo -u www-data rm -rf $WWW_DATA_HOME/git
 
-		echo "Create /srv/www/deploy-config.php file"
+		echo "Create $SETUP_DIR/deploy-config.php file"
 		DEPLOYCONFIG="$(
 			cat <<'EOF'
 <?php
@@ -1239,7 +1244,7 @@ define('CALLBACK_CLASSES', []);
 define('PLUGINS_FOLDER','plugins/');
 EOF
 		)"
-		echo -e "$DEPLOYCONFIG" >/srv/www/deploy-config.php
+		echo -e "$DEPLOYCONFIG" >$SETUP_DIR/deploy-config.php
 
 		# Loop through each environment
 		for env in "${environments[@]}"; do
@@ -1248,12 +1253,12 @@ EOF
 			# Update domains
 			FIND="{{${env}_domain}}"
 			REPLACE=$(printf '%s\n' "${domains[$env]}" | sed 's/[\&/]/\\&/g')
-			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/deploy-config.php
 
 			# Update branches
 			FIND="{{${env}_branch}}"
 			REPLACE=$(printf '%s\n' "${branches[$env]}" | sed 's/[\&/]/\\&/g')
-			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/deploy-config.php
 
 			# Generate and update access tokens and encrypt it
 			ACCESS_TOKEN=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
@@ -1262,27 +1267,22 @@ EOF
 			else
 				log_msg "$env webhook: https://$HTUSER:review@${domains[$env]}/deploy.php?t=$ACCESS_TOKEN&b=${branches[$env]}\n"
 			fi
-			ACCESS_TOKEN=$(echo $ACCESS_TOKEN | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
+			ACCESS_TOKEN=$(printf "%s" "$ACCESS_TOKEN" | openssl enc -aes-256-cbc -a -pbkdf2 -iter 10000 -K $ENC_KEY -iv $ENC_IV | tr -d '\n')
 			FIND="{{${env}_token}}"
 			REPLACE=$(printf '%s\n' "$ACCESS_TOKEN" | sed 's/[\&/]/\\&/g')
-			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/deploy-config.php
 
 			# Update the GIT address
 			FIND="{{gitaddr}}"
 			REPLACE=$(printf '%s\n' "$gitaddr" | sed 's/[\&/]/\\&/g; s/@/\\@/g')
-			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" /srv/www/deploy-config.php
+			perl -pi -e "s/\Q$FIND\E/$REPLACE/g" $SETUP_DIR/deploy-config.php
 		done
 
 		echo "Download php-git-deploy script..."
-		wget https://raw.githubusercontent.com/Lyquix/php-git-deploy/master/deploy.php -O /srv/www/deploy.php
+		wget https://raw.githubusercontent.com/Lyquix/php-git-deploy/master/deploy.php -O $SETUP_DIR/deploy.php
 
 		# Change file ownership
-		chown www-data:www-data /srv/www/deploy*
-
-		# Copy it to each environment
-		for env in "${environments[@]}"; do
-			cp /srv/www/deploy* /srv/www/${domains[$env]}/public_html
-		done
+		chown www-data:www-data $SETUP_DIR/deploy*
 
 		break
 		;;
@@ -1437,9 +1437,10 @@ chmod 744 /usr/sbin/apache-bad-bot-blocker.sh
 # The End
 printf $DIVIDER
 echo "The script executing has finished!"
-echo "Please check the log file /srv/www/lamp-ubuntu24.log for important information and any errors."
+echo "Please check the log file $SETUP_DIR/lamp-ubuntu24.log for important information and any errors."
+echo "You will need to copy files in $SETUP_DIR to each site and your local environment"
 
 # Save the log at the end
-printf "%s\n" "${LOGMSG[@]}" >>/srv/www/lamp-ubuntu24.log
+printf "%s\n" "${LOGMSG[@]}" >>$SETUP_DIR/lamp-ubuntu24.log
 
 exit
