@@ -582,6 +582,14 @@ RewriteRule ^(.*)$ https://{{development_domain}}/$1 [R=301,L]
   </If>
 </If>
 
+<If "%{ENV:WPCONFIG_ENVNAME} == 'local'">
+# Redirect requests to /wp-content/uploads to the production site
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} ^/wp-content/uploads/(.*)$
+RewriteRule ^wp-content/uploads/(.*)$ https://www.{{production_domain}}/wp-content/uploads/$1 [R=302,L]
+</If>
+
 # BEGIN WordPress
 # The directives (lines) between "BEGIN WordPress" and "END WordPress" are
 # dynamically generated, and should only be modified via WordPress filters.
