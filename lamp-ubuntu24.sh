@@ -844,6 +844,7 @@ $_WP_SECRETS = (function () {
 	];
 
 	// Determine the current environment, default to local
+	$domain = strtolower($_SERVER['HTTP_HOST']);
 	$env = 'local';
 	if (array_key_exists($domain, $environment)) {
 		$env = $environment[$domain];
@@ -1029,7 +1030,7 @@ RewriteRule ^(.*)$ https://{{staging_domain}}/$1 [R=301,L]
   AuthUserFile /srv/www/{{staging_domain}}/.htpasswd
   AuthName "Enter username and password"
   AuthType Basic
-  Require valid-user
+  Require valid-userdomain
   </If>
 </If>
 
