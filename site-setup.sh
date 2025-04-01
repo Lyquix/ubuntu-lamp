@@ -325,7 +325,8 @@ $_WP_SECRETS = (function () {
 		'{{production_domain}}' => 'production',
 		'www.{{production_domain}}' => 'production',
 		'{{staging_domain}}' => 'staging',
-		'{{development_domain}}' => 'development'
+		'{{development_domain}}' => 'development',
+		'.test' => 'local' // Change to the agreed-upon local domain
 	];
 
 	// Configuration of all environments
@@ -381,6 +382,8 @@ $_WP_SECRETS = (function () {
 	$env = 'local';
 	if (array_key_exists($domain, $environment)) {
 		$env = $environment[$domain];
+	} elseif (array_key_exists(getenv('WPCONFIG_ENVNAME'), $environment)) {
+		$env = $environment[getenv('WPCONFIG_ENVNAME')];
 	} elseif (preg_match('#/srv/www/([^/]+)/public_html#', __DIR__, $matches)) {
 		$dir = $matches[1];
 		if (array_key_exists($dir, $environment)) {
