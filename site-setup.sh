@@ -525,6 +525,11 @@ define('WP_DEBUG', true);
 define('WP_DEBUG_DISPLAY', $_WP_SECRETS['WP_DEBUG_DISPLAY']);
 define('WP_DEBUG_LOG', !$_WP_SECRETS['WP_DEBUG_DISPLAY']);
 
+/**
+ * Prevent WordPress core from auto-updating
+ */
+define('WP_AUTO_UPDATE_CORE', false);
+
 /* That's all, stop editing! Happy blogging. */
 
 /** Absolute path to the WordPress directory. */
