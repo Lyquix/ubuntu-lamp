@@ -1038,7 +1038,7 @@ RewriteRule ^(.*)$ https://{{staging_domain}}/$1 [R=301,L]
   AuthUserFile /srv/www/{{staging_domain}}/.htpasswd
   AuthName "Enter username and password"
   AuthType Basic
-  Require valid-userdomain
+  Require valid-user
   </If>
 </If>
 
