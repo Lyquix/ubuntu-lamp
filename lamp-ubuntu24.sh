@@ -774,7 +774,37 @@ rm mycron.txt
 
 if [ ! -f /etc/logrotate.d/mysql-backup ]; then
 	echo "Creating database backup rotation and compression file"
-	printf "# Daily\n/var/lib/mysql/daily.sql {\n\t daily\n\t missingok\n\t rotate 7\n\t compress\n\t copy\n}\n\n# Weekly\n/var/lib/mysql/weekly.sql {\n\t weekly\n\t missingok\n\t rotate 4\n\t compress\n\t copy\n}\n\n# Monthly\n/var/lib/mysql/monthly.sql {\n\t monthly\n\t missingok\n\t rotate 12\n\t compress\n\t copy\n}\n" >/etc/logrotate.d/mysql-backup
+	WP_LOGROTATE="$(
+		cat <<'EOF'
+# Daily
+/var/lib/mysql/daily.sql {
+	daily
+	missingok
+	rotate 7
+	compress
+	copy
+}
+
+# Weekly
+/var/lib/mysql/weekly.sql {
+	weekly
+	missingok
+	rotate 4
+	compress
+	copy
+}
+
+# Monthly
+/var/lib/mysql/monthly.sql {
+	monthly
+	missingok
+	rotate 12
+	compress
+	copy
+}
+EOF
+)"
+	echo -e "$WP_LOGROTATE" >/etc/logrotate.d/mysql-backup
 fi
 
 # Create wp-secrets.php file
@@ -1307,6 +1337,22 @@ EOF
 	*) echo "Please answer Y or N" ;;
 	esac
 done
+
+echo "Creating WordPress debug file rotation and compression file"
+WP_LOGROTATE="$(
+	cat <<'EOF'
+/srv/www/*/public_html/wp-content/debug.log
+/srv/www/*/public_html/wp-content/wflogs/debug.log {
+	size 100M
+	missingok
+	rotate 4
+	compress
+	notifempty
+	create 644 www-data www-data
+}
+EOF
+)"
+echo -e "$WP_LOGROTATE" >/etc/logrotate.d/wordpress
 
 echo "Download site-setup.sh script..."
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.sh
