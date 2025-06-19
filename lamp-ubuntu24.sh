@@ -882,6 +882,11 @@ $_WP_SECRETS = (function () {
 		}
 	}
 
+	// Force 'local' environment for wp-cli and bootstrapped scripts 
+		if ((defined('WP_CLI') && WP_CLI) || php_sapi_name() === 'cli' ) {
+				$env = 'local';
+					}
+					
 	// Get encryption key
 	$key = hex2bin(getenv('WPCONFIG_ENCKEY'));
 	$iv = hex2bin(getenv('WPCONFIG_ENCIV'));
