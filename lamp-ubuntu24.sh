@@ -203,13 +203,6 @@ SSLProtocol TLSv1.2
 ServerSignature Off
 ServerTokens Prod
 
-# Browser Caching
-ExpiresActive On
-ExpiresDefault "access plus 1 year"
-ExpiresByType text/html "access plus 15 minutes"
-Header unset Last-Modified
-Header unset ETag
-FileETag None
 EOF
 )"
 REPLACE=${REPLACE//\//\\\/}   # Escape the / characters
@@ -238,13 +231,14 @@ REPLACE="$(
 	Header set X-XSS-Protection "1; mode=block"
 	Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	Header set Referrer-Policy "same-origin"
+	ExpiresActive On
+	ExpiresDefault "access plus 1 year"
+	ExpiresByType text/html "access plus 5 minutes"
+	Header unset Last-Modified
+	Header unset ETag
+	FileETag None
 	SetEnv WPCONFIG_ENCKEY ENC_KEY
 	SetEnv WPCONFIG_ENCIV ENC_IV
-
-	# Disable unused HTTP request methods
-	<LimitExcept GET POST HEAD OPTIONS>
-	  deny from all
-	</LimitExcept>
 </Directory>
 EOF
 )"
