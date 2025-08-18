@@ -288,36 +288,79 @@ if [ ! -f /etc/apache2/mods-available/mpm_event.conf.orig ]; then
 	cp /etc/apache2/mods-available/mpm_event.conf /etc/apache2/mods-available/mpm_event.conf.orig
 fi
 
-# APACHE memory settings
-CPUS=$(nproc)                                                          # Number of CPUs
-PROCMEM=32                                                             # Average amount of memory used by each request
-SYSMEM=$(grep MemTotal /proc/meminfo | awk '{ printf "%d", $2/1024 }') # System memory in MB (rounded down)
-AVAILMEM=$(((SYSMEM - 256) * 75 / 100))                                # Memory available to Apache: (Total - 256MB) x 75%
-MAXWORKERS=$((AVAILMEM / PROCMEM))                                     # Max number of request workers: available memory / average request memory
-MAXTHREADS=$((MAXWORKERS / CPUS))                                      # Max number of threads
-MAXSPARETHREADS=$((MAXTHREADS * 2))                                    # Max number of spare threads
+# Apache memory settings
+
+PHP_CHILD_MB=96                  # Average RSS per PHP-FPM child (MB)
+OS_MB=256                        # Reserve for OS/other (MB)
+
+# Web split: DB 25%, Web 75%; within Web: PHP 85%, Apache 15%
+APACHE_TPC=32                    # ThreadsPerChild
+APACHE_HEADROOM_NUM=5            # Apache MaxRequestWorkers ≈ PHP * 1.25  (5/4)
+APACHE_HEADROOM_DEN=4
+APACHE_MINSPARE_PCT=33           # ~33% of MaxRequestWorkers
+
+FPM_START_PCT=20                 # ~20% of max_children
+FPM_MIN_SPARE_PCT=10             # ~10% of max_children
+FPM_MAX_SPARE_PCT=30             # ~30% of max_children
+FPM_MAX_REQUESTS=1000
+
+# ---- Helpers ----
+ceil_div() { # ceil_div A B
+  local a=$1 b=$2
+  echo $(( (a + b - 1) / b ))
+}
+round_up_to_multiple() { # round_up_to_multiple X M
+  local x=$1 m=$2
+  echo $(( ((x + m - 1) / m) * m ))
+}
+
+# ---- Detect system resources ----
+CPUS=$(nproc)
+SYSMEM=$(grep MemTotal /proc/meminfo | awk '{ printf "%d", $2/1024 }') # MB
+
+# ---- Budgeting ----
+AVAIL_MB=$(( SYSMEM - OS_MB ))
+DB_MB=$(( AVAIL_MB * 25 / 100 ))       # 25%
+WEB_MB=$(( AVAIL_MB - DB_MB ))     # 75%
+
+PHP_BUDGET_MB=$(( WEB_MB * 85 / 100 ))     # 85% Web
+APACHE_BUDGET_MB=$(( WEB_MB * 15 / 100 ))  # 15% of Web
+
+# ---- PHP-FPM capacity ----
+PM_MAX_CHILDREN=$(( PHP_BUDGET_MB / PHP_CHILD_MB ))
+(( PM_MAX_CHILDREN < 1 )) && PM_MAX_CHILDREN=1
+
+# ---- Apache sizing from FPM capacity ----
+RAW_MAX_REQ_WORKERS=$(ceil_div $(( PM_MAX_CHILDREN * APACHE_HEADROOM_NUM )) $APACHE_HEADROOM_DEN)
+MAXREQUESTWORKERS=$(round_up_to_multiple $RAW_MAX_REQ_WORKERS $APACHE_TPC)
+SERVERLIMIT=$(ceil_div $MAXREQUESTWORKERS $APACHE_TPC)
+STARTSERVERS=$(( CPUS > 2 ? 2 : CPUS ))
+MINSPARETHREADS=$(ceil_div $(( MAXREQUESTWORKERS * APACHE_MINSPARE_PCT )) 100)
+MAXSPARETHREADS=$MAXREQUESTWORKERS
+THREADLIMIT=$(( APACHE_TPC * 2 ))
+THREADSPERCHILD=$APACHE_TPC
 
 echo "Updating memory settings..."
 FIND="^\s*StartServers\s*[0-9]*"
-REPLACE="\tStartServers\t\t\t1\n\tServerLimit\t\t\t$CPUS"
+REPLACE="\tStartServers\t\t $STARTSERVERS\n\tServerLimit\t\t $SERVERLIMIT"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*MinSpareThreads\s*[0-9]*"
-REPLACE="\tMinSpareThreads\t\t $MAXTHREADS"
+REPLACE="\tMinSpareThreads\t\t $MINSPARETHREADS"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*MaxSpareThreads\s*[0-9]*"
 REPLACE="\tMaxSpareThreads\t\t $MAXSPARETHREADS"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*ThreadLimit\s*[0-9]*"
-REPLACE="\tThreadLimit\t\t$MAXTHREADS"
+REPLACE="\tThreadLimit\t\t $THREADLIMIT"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*ThreadsPerChild\s*[0-9]*"
-REPLACE="\tThreadsPerChild\t\t$MAXTHREADS"
+REPLACE="\tThreadsPerChild\t\t $THREADSPERCHILD"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*MaxRequestWorkers\s*[0-9]*"
-REPLACE="\tMaxRequestWorkers\t\t$MAXWORKERS"
+REPLACE="\tMaxRequestWorkers\t\t $MAXREQUESTWORKERS"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*MaxConnectionsPerChild\s*[0-9]*"
-REPLACE="\tMaxConnectionsPerChild  0"
+REPLACE="\tMaxConnectionsPerChild\t\t 0"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 
 # Apache logs rotation and compression
@@ -514,28 +557,29 @@ if [ ! -f /etc/php/8.3/fpm/pool.d/www.conf.orig ]; then
 	cp /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf.orig
 fi
 
-MAXCHILDREN=$((MAXWORKERS / 8)) # Max number of PHP-FPM processes
-STARTSERVERS=$((CPUS * 4))
-MINSPARESERVERS=$((CPUS * 2))
+# ---- PHP-FPM capacity ----
+PM_START_SERVERS=$(ceil_div $(( PM_MAX_CHILDREN * FPM_START_PCT )) 100)
+PM_MIN_SPARE=$(ceil_div $(( PM_MAX_CHILDREN * FPM_MIN_SPARE_PCT )) 100)
+PM_MAX_SPARE=$(ceil_div $(( PM_MAX_CHILDREN * FPM_MAX_SPARE_PCT )) 100)
 
 FIND="^\s*pm\.max_children\s*=\s*.*"
-REPLACE="pm.max_children = $MAXCHILDREN"
+REPLACE="pm.max_children = $PM_MAX_CHILDREN"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.start_servers\s*=\s*.*"
-REPLACE="pm.start_servers = $STARTSERVERS"
+REPLACE="pm.start_servers = $PM_START_SERVERS"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.min_spare_servers\s*=\s*.*"
-REPLACE="pm.min_spare_servers = $MINSPARESERVERS"
+REPLACE="pm.min_spare_servers = $PM_MIN_SPARE"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*pm\.max_spare_servers\s*=\s*.*"
-REPLACE="pm.max_spare_servers = $STARTSERVERS"
+REPLACE="pm.max_spare_servers = $PM_MAX_SPARE"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*;\s*pm\.max_requests\s*=\s*.*"
-REPLACE="pm.max_requests = $STARTSERVERS"
+REPLACE="pm.max_requests = 0"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 
