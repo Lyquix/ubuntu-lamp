@@ -360,7 +360,7 @@ FIND="^\s*MaxRequestWorkers\s*[0-9]*"
 REPLACE="\tMaxRequestWorkers\t\t $MAXREQUESTWORKERS"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 FIND="^\s*MaxConnectionsPerChild\s*[0-9]*"
-REPLACE="\tMaxConnectionsPerChild\t\t 0"
+REPLACE="\tMaxConnectionsPerChild\t\t 10000"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/apache2/mods-available/mpm_event.conf
 
 # Apache logs rotation and compression
@@ -579,7 +579,7 @@ REPLACE="pm.max_spare_servers = $PM_MAX_SPARE"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 FIND="^\s*;\s*pm\.max_requests\s*=\s*.*"
-REPLACE="pm.max_requests = 0"
+REPLACE="pm.max_requests = 1000"
 echo "www.conf: $REPLACE"
 perl -pi -e "s/$FIND/$REPLACE/m" /etc/php/8.3/fpm/pool.d/www.conf
 
