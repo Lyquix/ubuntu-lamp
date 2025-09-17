@@ -98,7 +98,7 @@ apt-get -y -q --fix-missing update
 echo "Upgrade installed packages..."
 apt-get -y -q upgrade
 echo "Installing utilities..."
-PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "redis-server" "redis-tools" "fail2ban" "iptables-persistent" "software-properties-common")
+PCKGS=("curl" "vim" "openssl" "git" "htop" "nload" "nethogs" "zip" "unzip" "sendmail" "sendmail-bin" "mysqltuner" "libcurl3-openssl-dev" "psmisc" "build-essential" "zlib1g-dev" "libpcre3" "libpcre3-dev" "memcached" "redis-server" "redis-tools" "fail2ban" "iptables-persistent" "software-properties-common" "goaccess")
 for PCKG in "${PCKGS[@]}"; do
 	echo " * Installing $PCKG..."
 	apt-get -y -q --no-install-recommends install ${PCKG}
