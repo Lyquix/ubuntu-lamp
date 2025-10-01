@@ -221,8 +221,9 @@ REPLACE="$(
 	AllowOverride all
 	Require all granted
 	IncludeOptional /etc/apache2/custom.d/globalblacklist.conf
-	Header set Access-Control-Allow-Origin "*"
-	Header set Access-Control-Allow-Methods "GET, POST, HEAD, OPTIONS"
+	SetEnvIf Host ".*" HOST_SET=$0
+    Header set Access-Control-Allow-Origin "https://%{HTTP_HOST}e" env=HOST_SET
+    Header set Timing-Allow-Origin: "https://%{HTTP_HOST}e" env=HOST_SET
 	Header set Timing-Allow-Origin: "*"
 	Header set X-Content-Type-Options "nosniff"
 	Header set X-Frame-Options "sameorigin"
@@ -231,6 +232,7 @@ REPLACE="$(
 	Header set X-XSS-Protection "1; mode=block"
 	Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	Header set Referrer-Policy "same-origin"
+	Header set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:; object-src 'none';"
 	ExpiresActive On
 	ExpiresDefault "access plus 1 year"
 	ExpiresByType text/html "access plus 5 minutes"
