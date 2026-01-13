@@ -1509,34 +1509,61 @@ printf $DIVIDER
 echo "Set up Bad Bot Blocker..."
 echo "$(
 	cat <<'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 REPO="https://raw.githubusercontent.com/mitchellkrogza/apache-ultimate-bad-bot-blocker/master/Apache_2.4/custom.d"
 DIR="/etc/apache2/custom.d"
+FILE="globalblacklist.conf"
 
-mkdir -p $DIR
+mkdir -p "$DIR"
 
-wget -q $REPO/globalblacklist.conf -O $DIR/globalblacklist.conf
+dest="$DIR/$FILE"
+tmp="$(mktemp "${DIR}/${FILE}.tmp.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
 
-if [ ! -f $DIR/bad-referrer-words.conf ]; then
-	echo "SetEnvIfNoCase Referer ~*badreferrername spam_ref" >  $DIR/bad-referrer-words.conf
-fi
-if [ ! -f $DIR/blacklist-ips.conf ]; then
-	echo "Require not ip 0.0.0.0" > $DIR/blacklist-ips.conf
-fi
-if [ ! -f $DIR/blacklist-user-agents.conf ]; then
-	echo "BrowserMatchNoCase \"^(.*?)(\bBadUserAgentName\b)(.*)$\" bad_bot" > $DIR/blacklist-user-agents.conf
-fi
-if [ ! -f $DIR/whitelist-domains.conf ]; then
-	echo "SetEnvIfNoCase Referer \"~*example\.com\" good_ref" > $DIR/whitelist-domains.conf
-fi
-if [ ! -f $DIR/whitelist-ips.conf ]; then
-	echo "Require ip 127.0.0.1" > $DIR/whitelist-ips.conf
+# Robust curl options
+CURL_OPTS=(
+  --fail
+  --location
+  --silent
+  --show-error
+  --connect-timeout 10
+  --max-time 60
+  --retry 5
+  --retry-delay 2
+  --retry-all-errors
+)
+
+# Download
+if ! curl "${CURL_OPTS[@]}" "$REPO/$FILE" -o "$tmp"; then
+  exit 0
 fi
 
+# Sanity check: must not be empty
+[[ -s "$tmp" ]] || exit 0
+
+# Protect against GitHub / CDN returning an HTML error page
+if head -n 1 "$tmp" | grep -qiE '<!doctype html|<html'; then
+  exit 0
+fi
+
+# Atomic replace
+install -m 0644 "$tmp" "$dest"
+
+# Ensure local config stubs exist
+[[ -f "$DIR/bad-referrer-words.conf" ]] || echo 'SetEnvIfNoCase Referer ~*badreferrername spam_ref' > "$DIR/bad-referrer-words.conf"
+[[ -f "$DIR/blacklist-ips.conf" ]] || echo 'Require not ip 0.0.0.0' > "$DIR/blacklist-ips.conf"
+[[ -f "$DIR/blacklist-user-agents.conf" ]] || echo 'BrowserMatchNoCase "^(.*?)(\bBadUserAgentName\b)(.*)$" bad_bot' > "$DIR/blacklist-user-agents.conf"
+[[ -f "$DIR/whitelist-domains.conf" ]] || echo 'SetEnvIfNoCase Referer "~*example\.com" good_ref' > "$DIR/whitelist-domains.conf"
+[[ -f "$DIR/whitelist-ips.conf" ]] || echo 'Require ip 127.0.0.1' > "$DIR/whitelist-ips.conf"
+
+# Validate Apache config before reload
+apachectl configtest >/dev/null 2>&1 || exit 1
+
+# Reload only if config is valid
 service apache2 reload
 
-exit 0
 EOF
 )" >/usr/sbin/apache-bad-bot-blocker.sh
 chmod 744 /usr/sbin/apache-bad-bot-blocker.sh
