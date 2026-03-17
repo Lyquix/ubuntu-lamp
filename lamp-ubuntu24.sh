@@ -221,9 +221,11 @@ REPLACE="$(
 	AllowOverride all
 	Require all granted
 	IncludeOptional /etc/apache2/custom.d/globalblacklist.conf
+	Deny from env=bad_bot
+	Deny from env=spam_ref
 	SetEnvIf Host ".*" HOST_SET=$0
-    Header set Access-Control-Allow-Origin "https://%{HTTP_HOST}e" env=HOST_SET
-    Header set Timing-Allow-Origin: "https://%{HTTP_HOST}e" env=HOST_SET
+	Header set Access-Control-Allow-Origin "https://%{HTTP_HOST}e" env=HOST_SET
+	Header set Timing-Allow-Origin: "https://%{HTTP_HOST}e" env=HOST_SET
 	Header set Timing-Allow-Origin: "*"
 	Header set X-Content-Type-Options "nosniff"
 	Header set X-Frame-Options "sameorigin"
