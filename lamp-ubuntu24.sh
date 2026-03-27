@@ -804,7 +804,7 @@ echo "Add automatic database dump and rotation..."
 crontab -l >mycron.txt
 #echo new cron into cron file
 cat >>mycron.txt <<EOL
-# Daily 00:00 - Daily Backup
+# Daily 00:30 - Daily Backup
 30 0 * * * /srv/www/daily-backup.sh
 
 # Sundays 03:00 - restart Apache and MySQL
