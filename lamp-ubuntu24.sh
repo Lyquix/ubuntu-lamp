@@ -817,6 +817,9 @@ cat >>mycron.txt <<EOL
 # First Day of the Month  03:30 - restart server
 30 3 1 * * /sbin/shutdown -r now
 
+# Daily 05:00 update apache bad bot blocker definitions
+0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
+
 # Twice Daily 06:00, 18:00 - check and update ssl certificates
 0 6,18 * * * /usr/bin/certbot renew --quiet
 
