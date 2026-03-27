@@ -638,6 +638,29 @@ while true; do
 done
 mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$mysqlrootpsw';"
 
+cat > ~/.my.cnf << EOF
+[client]
+host=localhost
+port=3306
+user=root
+password=$mysqlrootpsw
+
+[mysqldump]
+host=localhost
+port=3306
+user=root
+password=$mysqlrootpsw
+
+[mysqladmin]
+host=localhost
+port=3306
+user=root
+password=$mysqlrootpsw
+EOF
+
+chmod 600 ~/.my.cnf
+echo "~/.my.cnf created successfully"
+
 echo "Secure MySQL installation"
 echo "Make sure you answer the questions that will be prompted as follows:"
 echo " - Validate password component: No"
@@ -781,20 +804,8 @@ echo "Add automatic database dump and rotation..."
 crontab -l >mycron.txt
 #echo new cron into cron file
 cat >>mycron.txt <<EOL
-# Daily 00:00 - database check and optimization
-0 0 * * * mysqlcheck -Aos -u root -p'$mysqlrootpsw' > /dev/null 2>&1
-
-# Daily 01:00 - database dump
-0 1 * * * mysqldump -u root -p'$mysqlrootpsw' --all-databases --single-transaction --quick > /var/lib/mysql/daily.sql
-
-# Mondays 02:00 - copy daily database dump to weekly
-0 2 * * 0 cp /var/lib/mysql/daily.sql /var/lib/mysql/weekly.sql
-
-# First Day of the Month 02:00 - copy daily database dump to monthly
-0 2 1 * * cp /var/lib/mysql/daily.sql /var/lib/mysql/monthly.sql
-
-# Daily 05:00 update apache bad bot blocker definitions
-0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
+# Daily 00:00 - Daily Backup
+30 0 * * * /srv/www/daily-backup.sh
 
 # Sundays 03:00 - restart Apache and MySQL
 0 3 * * 0 service apache2 restart
@@ -803,8 +814,8 @@ cat >>mycron.txt <<EOL
 # Sundays 03:15 - Update and upgrade OS
 15 3 * * 0 apt-get update && apt-get -y upgrade
 
-# First Day of the Month  04:00 - restart server
-0 4 1 * * /sbin/shutdown -r now
+# First Day of the Month  03:30 - restart server
+30 3 1 * * /sbin/shutdown -r now
 
 # Twice Daily 06:00, 18:00 - check and update ssl certificates
 0 6,18 * * * /usr/bin/certbot renew --quiet
@@ -1401,15 +1412,28 @@ EOF
 )"
 echo -e "$WP_LOGROTATE" >/etc/logrotate.d/wordpress
 
-echo "Download site-setup.sh script..."
-wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.sh
-chown www-data:www-data /srv/www/site-setup.sh
-chmod +x /srv/www/site-setup.sh
+# Download additional scripts
+printf $DIVIDER
+echo "Download additional scripts..."
 
-echo "Download file-permissions.sh script..."
+echo "Download daily-backup.sh"
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/daily-backup.sh -O /srv/www/daily-backup.sh
+chmod +x /srv/www/daily-backup.sh
+
+echo "Download file-permissions.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/file-permissions.sh -O /srv/www/file-permissions.sh
 chown www-data:www-data /srv/www/file-permissions.sh
 chmod +x /srv/www/file-permissions.sh
+
+echo "Download secrets-update.sh"
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/secrets-update.sh -O /srv/www/secrets-update.sh
+chown www-data:www-data /srv/www/site-setup.sh
+chmod +x /srv/www/site-setup.sh
+
+echo "Download site-setup.sh"
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.sh
+chown www-data:www-data /srv/www/site-setup.sh
+chmod +x /srv/www/site-setup.sh
 
 # Set firewall rules
 printf $DIVIDER
