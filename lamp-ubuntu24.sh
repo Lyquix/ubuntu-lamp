@@ -1418,6 +1418,7 @@ echo "Download additional scripts..."
 
 echo "Download daily-backup.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/daily-backup.sh -O /srv/www/daily-backup.sh
+chown www-data:www-data /srv/www/daily-backup.sh
 chmod +x /srv/www/daily-backup.sh
 
 echo "Download file-permissions.sh"
