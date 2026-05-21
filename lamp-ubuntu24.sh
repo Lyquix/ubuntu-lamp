@@ -130,6 +130,19 @@ echo "Set up unattended Upgrades..."
 apt-get -y -q --no-install-recommends install unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
+# Hardening SSH security
+printf "$DIVIDER"
+echo "Hardening SSH security"
+if [ ! -f /etc/ssh/sshd_config.orig ]; then
+	echo "Backing up original SSH configuration file to /etc/ssh/sshd_config.orig"
+	cp /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
+fi
+sed -i \
+  -e 's/^[#[:space:]]*AllowAgentForwarding.*/AllowAgentForwarding no/' \
+  -e 's/^[#[:space:]]*X11Forwarding.*/X11Forwarding no/' \
+  /etc/ssh/sshd_config
+service ssh restart
+
 # Set password for www-data user and allow shell access
 printf $DIVIDER
 echo "WWW-DATA USER"
