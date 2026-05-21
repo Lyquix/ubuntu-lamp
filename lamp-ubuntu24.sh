@@ -818,7 +818,7 @@ crontab -l >mycron.txt
 #echo new cron into cron file
 cat >>mycron.txt <<EOL
 # Daily 00:30 - Daily Backup
-30 0 * * * /srv/www/daily-backup.sh
+30 0 * * * /usr/local/sbin/daily-backup.sh
 
 # Sundays 03:00 - restart Apache and MySQL
 0 3 * * 0 service apache2 restart
@@ -834,7 +834,7 @@ cat >>mycron.txt <<EOL
 0 5 * * * /usr/sbin/apache-bad-bot-blocker.sh
 
 # Twice Daily 06:00, 18:00 - check and update ssl certificates
-0 6,18 * * * /usr/bin/certbot renew --quiet
+0 6,18 * * * /usr/local/sbin/certbot-renew.sh
 
 EOL
 #install new cron file
@@ -1428,14 +1428,9 @@ EOF
 )"
 echo -e "$WP_LOGROTATE" >/etc/logrotate.d/wordpress
 
-# Download additional scripts
+# Download utility scripts
 printf $DIVIDER
-echo "Download additional scripts..."
-
-echo "Download daily-backup.sh"
-wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/daily-backup.sh -O /srv/www/daily-backup.sh
-chown www-data:www-data /srv/www/daily-backup.sh
-chmod +x /srv/www/daily-backup.sh
+echo "Download utility scripts..."
 
 echo "Download file-permissions.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/file-permissions.sh -O /srv/www/file-permissions.sh
@@ -1451,6 +1446,20 @@ echo "Download site-setup.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/site-setup.sh -O /srv/www/site-setup.sh
 chown www-data:www-data /srv/www/site-setup.sh
 chmod +x /srv/www/site-setup.sh
+
+# Download automation scripts
+printf $DIVIDER
+echo "Download automation scripts..."
+
+echo "Download daily-backup.sh"
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/daily-backup.sh -O /usr/local/sbin/daily-backup.sh
+chown root:root /usr/local/sbin/daily-backup.sh
+chmod +x /usr/local/sbin/daily-backup.sh
+
+echo "Download certbot-renew.sh"
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/certbot-renew.sh -O /usr/local/sbin/certbot-renew.sh
+chown root:root /usr/local/sbincertbot-renew.sh
+chmod +x /usr/local/sbin/site-setup.sh
 
 # Set firewall rules
 printf $DIVIDER
