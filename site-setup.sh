@@ -378,7 +378,7 @@ $_WP_SECRETS = (function () {
 	];
 
 	// Determine the current environment, default to local
-	$domain = strtolower($_SERVER['HTTP_HOST']);
+	$domain = strtolower($_SERVER['HTTP_HOST'] ?? '');
 	$env = 'local';
 	if (array_key_exists($domain, $environment)) {
 		$env = $environment[$domain];

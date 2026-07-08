@@ -52,6 +52,17 @@ log_msg "Encryption Key: $ENC_KEY"
 ENC_IV=$(openssl rand -hex 16)
 log_msg "Encryption IV: $ENC_IV"
 
+printf $DIVIDER
+echo "Creating WP-CLI secrets file (/etc/wpconfig/wpcli.env) for CLI decryption"
+install -d -m 750 -o root -g www-data /etc/wpconfig
+cat > /etc/wpconfig/wpcli.env <<EOF
+WPCONFIG_ENCKEY=$ENC_KEY
+WPCONFIG_ENCIV=$ENC_IV
+EOF
+chown root:www-data /etc/wpconfig/wpcli.env
+chmod 640 /etc/wpconfig/wpcli.env
+log_msg "Created /etc/wpconfig/wpcli.env (640 root:www-data)"
+
 # Create setup directory to store log file and generated configuration files
 SETUP_DIR="/srv/www/setup-$(date +"%Y%m%d-%H%M%S")"
 echo "Creating setup directory $SETUP_DIR to store log and generated configuration files"
@@ -944,7 +955,7 @@ $_WP_SECRETS = (function () {
 	];
 
 	// Determine the current environment, default to local
-	$domain = strtolower($_SERVER['HTTP_HOST']);
+	$domain = strtolower($_SERVER['HTTP_HOST'] ?? '');
 	$env = 'local';
 	if (array_key_exists($domain, $environment)) {
 		$env = $environment[$domain];
@@ -1460,6 +1471,20 @@ echo "Download certbot-renew.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/certbot-renew.sh -O /usr/local/sbin/certbot-renew.sh
 chown root:root /usr/local/sbincertbot-renew.sh
 chmod +x /usr/local/sbin/site-setup.sh
+
+# WP-CLI bootstrap
+printf $DIVIDER
+echo "Download WP-CLI bootstrap script..."
+wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/wp-cli-bootstrap.php -O /srv/www/wp-cli-bootstrap.php
+chown www-data:www-data /srv/www/wp-cli-bootstrap.php
+chmod 644 /srv/www/wp-cli-bootstrap.php
+install -d -m 755 -o www-data -g www-data /var/www/.wp-cli
+cat > /var/www/.wp-cli/config.yml <<'EOF'
+require:
+ - /srv/www/wp-cli-bootstrap.php
+EOF
+chown www-data:www-data /var/www/.wp-cli/config.yml
+chmod 644 /var/www/.wp-cli/config.yml
 
 # Set firewall rules
 printf $DIVIDER
