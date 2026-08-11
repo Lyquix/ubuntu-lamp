@@ -1469,8 +1469,8 @@ chmod +x /usr/local/sbin/daily-backup.sh
 
 echo "Download certbot-renew.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/certbot-renew.sh -O /usr/local/sbin/certbot-renew.sh
-chown root:root /usr/local/sbincertbot-renew.sh
-chmod +x /usr/local/sbin/site-setup.sh
+chown root:root /usr/local/sbin/certbot-renew.sh
+chmod +x /usr/local/sbin/certbot-renew.sh
 
 # WP-CLI bootstrap
 printf $DIVIDER
