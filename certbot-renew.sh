@@ -86,11 +86,11 @@ overall_status="ok"
     echo "[$run_ts]"
     echo ""
 
-    # A live/ directory without a matching renewal/<name>.conf is orphaned;
-    # certbot will never renew it, and it may hold an old expired certificate.
-    [[ -f "/etc/letsencrypt/renewal/$cert_name.conf" ]] || continue
-
     for cert_name in "${cert_names[@]}"; do
+
+        # A live/ directory without a matching renewal/<name>.conf is orphaned;
+        # certbot will never renew it, and it may hold an old expired certificate.
+        [[ -f "/etc/letsencrypt/renewal/$cert_name.conf" ]] || continue
 
         expiry=$(_expiry_date "$cert_name")
         if [[ "$expiry" == "unknown" ]]; then
