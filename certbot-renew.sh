@@ -68,7 +68,7 @@ fi
 mkdir -p "$(dirname "$LOG_FILE")"
 
 mapfile -t cert_names < <(
-    grep -rh "SSLCertificateFile" /etc/apache2/sites-enabled/*.conf 2>/dev/null \
+    grep -hE '^[[:space:]]*SSLCertificateFile[[:space:]]' /etc/apache2/sites-enabled/*.conf 2>/dev/null \
         | grep -o '/etc/letsencrypt/live/[^/]*' \
         | sed 's|/etc/letsencrypt/live/||' \
         | sort -u
@@ -86,6 +86,10 @@ overall_status="ok"
     echo "[$run_ts]"
     echo ""
 
+    # A live/ directory without a matching renewal/<name>.conf is orphaned;
+    # certbot will never renew it, and it may hold an old expired certificate.
+    [[ -f "/etc/letsencrypt/renewal/$cert_name.conf" ]] || continue
+
     for cert_name in "${cert_names[@]}"; do
 
         expiry=$(_expiry_date "$cert_name")
@@ -96,7 +100,13 @@ overall_status="ok"
         fi
 
         chain_pem="/etc/letsencrypt/live/$cert_name/fullchain.pem"
-        if [[ -f "$chain_pem" ]] && openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt "$chain_pem" &>/dev/null; then
+        cert_pem="/etc/letsencrypt/live/$cert_name/cert.pem"
+        # Verify the leaf, using fullchain.pem as the untrusted intermediate set.
+        # openssl verify only verifies the first certificate in a file, so passing
+        # fullchain.pem as the target cannot build the chain and fails (error 20).
+        if [[ -f "$chain_pem" && -f "$cert_pem" ]] \
+            && openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt \
+                 -untrusted "$chain_pem" "$cert_pem" &>/dev/null; then
             chain_valid="true"
         else
             chain_valid="false"
