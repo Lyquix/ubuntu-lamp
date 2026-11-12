@@ -1500,10 +1500,40 @@ wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/daily-backup.sh
 chown root:root /usr/local/sbin/daily-backup.sh
 chmod +x /usr/local/sbin/daily-backup.sh
 
+echo "Creating daily-backup.log file rotation and compression file"
+DAILY_BACKUP_LOGROTATE="$(
+	cat <<'EOF'
+/srv/www/*/logs/daily-backup.log {
+	size 100M
+	missingok
+	rotate 4
+	compress
+	notifempty
+	create 644 www-data www-data
+}
+EOF
+)"
+echo -e "$DAILY_BACKUP_LOGROTATE" >/etc/logrotate.d/daily-backup
+
 echo "Download certbot-renew.sh"
 wget https://raw.githubusercontent.com/Lyquix/ubuntu-lamp/master/certbot-renew.sh -O /usr/local/sbin/certbot-renew.sh
 chown root:root /usr/local/sbin/certbot-renew.sh
 chmod +x /usr/local/sbin/certbot-renew.sh
+
+echo "Creating certbot-renew.log file rotation and compression file"
+CERTBOT_RENEW_LOGROTATE="$(
+	cat <<'EOF'
+/srv/www/*/logs/certbot-renew.log {
+	size 100M
+	missingok
+	rotate 4
+	compress
+	notifempty
+	create 644 www-data www-data
+}
+EOF
+)"
+echo -e "$CERTBOT_RENEW_LOGROTATE" >/etc/logrotate.d/certbot-renew
 
 # WP-CLI bootstrap
 printf $DIVIDER
