@@ -16,6 +16,21 @@ LOG_FILE="${LOG_FILE:-}"
 SITES_ENABLED_DIR="${SITES_ENABLED_DIR:-/etc/apache2/sites-enabled}"
 SEPARATOR="$(printf '=%.0s' {1..80})"
 
+# --- Per-server settings ----------------------------------------------------
+# One script for every server; differences live in an optional root-owned
+# shell file (default /etc/daily-backup.env) that can set:
+#   BACKUP_EXCLUDE    tar --exclude patterns, one per line (big asset folders)
+#   BACKUP_DATABASES  space-separated databases to dump instead of all
+#                     (managed MySQL/RDS users cannot dump the mysql schema)
+#   LOG_FILE          log path, when it cannot be found from the Apache vhost
+ENV_FILE="${ENV_FILE:-/etc/daily-backup.env}"
+BACKUP_EXCLUDE="${BACKUP_EXCLUDE:-}"
+BACKUP_DATABASES="${BACKUP_DATABASES:-}"
+if [[ -r "$ENV_FILE" ]]; then
+    # shellcheck source=/dev/null
+    . "$ENV_FILE"
+fi
+
 # --- Log path: same discovery as certbot-renew.sh ---------------------------
 # Logging is diagnostic and must never stop a backup. If the path cannot be
 # resolved or written, warn on stderr and continue with logging disabled.
@@ -154,7 +169,12 @@ fi
 # --- Optimize (secondary) ---------------------------------------------------
 if [[ $mysql_ok -eq 1 ]]; then
     t=$(date +%s)
-    mysqlcheck -Aos >/dev/null 2>&1; rc=$?
+    if [[ -n "$BACKUP_DATABASES" ]]; then
+        # shellcheck disable=SC2086
+        mysqlcheck -os --databases $BACKUP_DATABASES >/dev/null 2>&1; rc=$?
+    else
+        mysqlcheck -Aos >/dev/null 2>&1; rc=$?
+    fi
     if [[ $rc -eq 0 ]]; then
         step_ok mysqlcheck $(( $(date +%s) - t ))
     else
@@ -168,7 +188,12 @@ fi
 dump_ok=0
 if [[ $mysql_ok -eq 1 && $mysql_dir_ok -eq 1 ]]; then
     t=$(date +%s)
-    err=$(mysqldump --all-databases --single-transaction --quick 2>&1 > "$MYSQL_DIR/daily.sql"); rc=$?
+    if [[ -n "$BACKUP_DATABASES" ]]; then
+        # shellcheck disable=SC2086
+        err=$(mysqldump --databases $BACKUP_DATABASES --single-transaction --quick --no-tablespaces --lock-tables=false --set-gtid-purged=OFF 2>&1 > "$MYSQL_DIR/daily.sql"); rc=$?
+    else
+        err=$(mysqldump --all-databases --single-transaction --quick 2>&1 > "$MYSQL_DIR/daily.sql"); rc=$?
+    fi
     d=$(( $(date +%s) - t ))
     if [[ $rc -eq 0 ]]; then
         dump_ok=1
@@ -186,9 +211,15 @@ fi
 web_ok=0
 if [[ $web_dir_ok -eq 1 ]]; then
     t=$(date +%s)
-    err=$(tar -czf "$WEB_DIR/daily.tar.gz" "$WEB_DIR"/*/public_html 2>&1); rc=$?
+    tar_args=(--exclude='*/wp-content/debug.log')
+    while IFS= read -r pattern; do
+        [[ -n "${pattern//[[:space:]]/}" ]] && tar_args+=(--exclude="$pattern")
+    done <<< "$BACKUP_EXCLUDE"
+    err=$(tar -czf "$WEB_DIR/daily.tar.gz" "${tar_args[@]}" "$WEB_DIR"/*/public_html 2>&1); rc=$?
     d=$(( $(date +%s) - t ))
-    if [[ $rc -eq 0 ]]; then
+    # tar exit 1 means a file changed while it was read (busy logs/caches);
+    # the archive is still complete, so only exit 2+ is a failure.
+    if [[ $rc -le 1 ]]; then
         web_ok=1
         step_ok web_archive "$d" "$(stat -c %s "$WEB_DIR/daily.tar.gz" 2>/dev/null || echo 0)"
     else
